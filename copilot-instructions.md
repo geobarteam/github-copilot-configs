@@ -1,14 +1,14 @@
-# Copilot Instructions — {{SolutionName}}
+# Copilot Instructions — MyApp
 
 <!-- Optimized for Claude Sonnet 4.6: XML tags for critical sections, markdown headers
      for structure, concise sections, one example per pattern. Anthropic best practices
      applied: role assignment, clear-not-aggressive language, investigate before answering. -->
 
-You are the coding assistant for the {{SolutionName}} project. Read and investigate relevant files before answering questions or making changes — never speculate about code you have not opened.
+You are the coding assistant for the MyApp project. Read and investigate relevant files before answering questions or making changes — never speculate about code you have not opened.
 
 <context>
-Blazor Server solution: WFE (Blazor Server) · BFF (Web API + NServiceBus + Hangfire) · Worker · SQL Server DACPAC.
-Onion/Screaming Architecture, CQRS-lite. All hosts wired via `Nihdi.Core.Configuration`.
+Blazor Server solution: WFE (Blazor Server) · BFF (Web API + Hangfire) · Worker · SQL Server DACPAC.
+Onion/Screaming Architecture, CQRS-lite.
 .NET 10 · MSTest v4 · Moq · `Microsoft.Testing.Platform` · StyleCop (`TreatWarningsAsErrors`).
 </context>
 
@@ -19,13 +19,12 @@ Onion/Screaming Architecture, CQRS-lite. All hosts wired via `Nihdi.Core.Configu
 
 1. After every code change, run all three:
 ```
-dotnet build src/{{SolutionName}}.sln
-{{TestExePath}}
-dotnet format src/{{SolutionName}}.sln --verify-no-changes
+dotnet build src/MyApp.sln
+dotnet test
+dotnet format src/MyApp.sln --verify-no-changes
 ```
-`dotnet test` is not supported — use the `.exe` directly (`Microsoft.Testing.Platform` + .NET 10 SDK).
 
-2. Never throw for business errors — use `Result<T>` from `Nihdi.Core.Functional`:
+2. Never throw for business errors — use `Result<T>`:
 ```csharp
 // Handler → Result<T>.Failure("msg") or Result<T>.Success(value)
 // Controller → if (!result.IsSuccess) return BadRequest(result.Error); return Ok();
@@ -63,7 +62,7 @@ dotnet format src/{{SolutionName}}.sln --verify-no-changes
 ```
 src/
 ├── Host/Web/            # Blazor Server (WFE)
-├── Host/BFF/            # Web API + NServiceBus + Hangfire
+├── Host/BFF/            # Web API + Hangfire
 ├── Host/Api/            # Secondary Web API
 ├── Host/Worker/         # Background worker
 ├── Presentation/        # Razor Class Library (pages, ViewModels, Services)
@@ -71,7 +70,7 @@ src/
 ├── Core/Domain/         # Entities, value objects (zero deps)
 ├── Core/Infrastructure/ # Messaging, external services
 ├── Core/Persistence/    # EF Core DbContext, repositories
-├── Contracts/           # Shared DTOs + NServiceBus contracts
+├── Contracts/           # Shared DTOs
 ├── Database/            # SQL Server DACPAC
 └── Test/{Unit,Bff,Common,UI}/
 ```
@@ -163,7 +162,7 @@ EF Core only in `Core.Persistence`. Domain entities: plain C#.
 
 - AAA (Arrange/Act/Assert), MSTest v4, `[TestClass]` / `[TestMethod]`.
 - Mock at boundary (interfaces only, Moq). No real DB/HTTP in unit tests.
-- BFF integration (`Test.Bff`): Reqnroll (SpecFlow) `.feature` files + step definitions + `CustomWebApplicationFactory<Program, {{DbContextName}}>` + SQLite in-memory + `TestAuthenticationHandler`.
+- BFF integration (`Test.Bff`): Reqnroll (SpecFlow) `.feature` files + step definitions + `CustomWebApplicationFactory<Program, AppDbContext>` + SQLite in-memory + `TestAuthenticationHandler`.
 - UI component (`Test.UI`): bUnit `BunitTest` base class, MSTest, renders Blazor components in isolation.
 
 ---
@@ -195,13 +194,13 @@ return Ok(result.Value);
 
 ### Auth & User Context
 
-- WFE → OIDC (`AddOpenIdConnectForNihdi`); BFF/Api → JWT (`AddOAuthForNihdi`).
+- WFE → OIDC; BFF/Api → JWT bearer.
 - WFE → BFF with client-credentials.
-- `UserContextHeaderHandler` sends `Nihdi-User-Id`/`Nihdi-User-Name`; BFF reads via `HttpUserContextAccessor`.
+- `UserContextHeaderHandler` sends user identity headers; BFF reads via `HttpUserContextAccessor`.
 
 ### Logging
 
-`ILogger<T>` + structured placeholders only. `Nihdi.Core.Configuration` owns Serilog — **no logging config in app code**.
+`ILogger<T>` + structured placeholders only. Shared configuration library owns Serilog — **no logging config in app code**.
 
 ### NServiceBus
 
@@ -214,7 +213,7 @@ return Ok(result.Value);
 ### Refit & HTTP Clients
 
 - WFE → BFF: Refit in `Presentation/Shared/ServiceClients/Bff/Clients/`. Requires `apiVersion` param + `CancellationToken`.
-- BFF → Api: `IApiClient` via `AddNihdiHttpServiceClient`.
+- BFF → Api: `IApiClient` via HTTP service client registration.
 - Feature Services: `Presentation/<Feature>/Services/` — wrap Refit, `catch ApiException → ConvertApiExceptionToResult<T>()`.
 
 ### Blazor ViewModel Lifecycle
@@ -247,7 +246,7 @@ Before starting, identify a **reference feature** in the codebase — the existi
 ## AppSettings Layering
 
 `appsettings.json` → `*.Development.json` → `*.UnitTest.json` → `*.UnitTest.Development.json` (gitignored) → env vars.
-Required block: `Nihdi.Application` with `BusinessSystemName`, `SubSystemName`, `SubSystemType`, `Environment`.
+Required block: `Application` with `BusinessSystemName`, `SubSystemName`, `SubSystemType`, `Environment`.
 **No secrets in committed files. No `appsettings.TST/PRD.json`.**
 
 ---
@@ -261,7 +260,7 @@ Required block: `Nihdi.Application` with `BusinessSystemName`, `SubSystemName`, 
 | Throw for validation errors | Return `Result<T>` |
 | EF attributes on domain entities | `IEntityTypeConfiguration<T>` in Persistence |
 | `IMessageSession` in Application | `IMessagingService` abstraction |
-| Manual logging/security setup | `Nihdi.Core.Configuration` handles it |
+| Manual logging/security setup | Shared configuration library handles it |
 | Service without interface | Scrutor needs `I<Name>` to register |
 | Skip `CancellationToken` | Propagate on every async call |
 | Multiple plan steps per reply | One step → stop at HUMAN GATE |
@@ -279,11 +278,11 @@ Before answering questions about the codebase, read the relevant files first. Ne
 ## Commands
 
 ```powershell
-dotnet build src/{{SolutionName}}.sln                                                          # Build
-dotnet restore src/{{SolutionName}}.sln                                                       # Restore (NuGet sources configured at user level)
-{{TestExePath}}                       # Unit tests (dotnet test unsupported — MTP + .NET 10)
-{{TestExePath}} --filter "<Class>"   # Filtered
-dotnet format src/{{SolutionName}}.sln --verify-no-changes                                    # Format check
+dotnet build src/MyApp.sln                                                          # Build
+dotnet restore src/MyApp.sln                                                       # Restore (NuGet sources configured at user level)
+dotnet test                       # Unit tests
+dotnet test --filter "<Class>"   # Filtered
+dotnet format src/MyApp.sln --verify-no-changes                                    # Format check
 ```
 
 ## Conventions

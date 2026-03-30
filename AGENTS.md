@@ -1,4 +1,4 @@
-# Agent Workflow — {{SolutionName}}
+# Agent Workflow
 
 <!-- Shared agent behavior: plan-first discipline, red/green/refactor/proof loop,
      human gates, task execution rules. Referenced by CLAUDE.md for Claude Code.
@@ -40,19 +40,19 @@ Each implementation step follows this cycle:
 ```
 1. READ    — read the plan step, understand scope and files
 2. RED     — write the failing test FIRST
-3. RUN     — {{TestExePath}} --filter "<TestMethod>" → confirm FAIL
+3. RUN     — dotnet test --filter "<TestMethod>" → confirm FAIL
 4. GREEN   — write minimal production code to pass
-5. RUN     — {{TestExePath}} --filter "<TestMethod>" → confirm PASS
+5. RUN     — dotnet test --filter "<TestMethod>" → confirm PASS
 6. REFACTOR — cleanup if needed
 7. CODE ANALYSIS — fix all violations before proving:
-   a. dotnet build src/{{SolutionName}}.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+" | Sort-Object | Get-Unique
-   b. dotnet format src/{{SolutionName}}.sln  (auto-fix formatting)
+   a. dotnet build src/MyApp.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+" | Sort-Object | Get-Unique
+   b. dotnet format src/MyApp.sln  (auto-fix formatting)
    c. Fix any remaining violations manually (skip disabled rules)
    d. Repeat a–c until the Select-String output is empty
 8. PROVE:
-   - dotnet build src/{{SolutionName}}.sln → succeeded (zero warnings/errors)
-   - {{TestExePath}} → all pass
-   - dotnet format src/{{SolutionName}}.sln --verify-no-changes → exit 0
+   - dotnet build src/MyApp.sln → succeeded (zero warnings/errors)
+   - dotnet test → all pass
+   - dotnet format src/MyApp.sln --verify-no-changes → exit 0
 9. 🛑 STOP — present results, wait for user approval
 10. MARK DONE — update _plans/<FeatureName>.md: change [ ] → [x] on this step's checkboxes
 ```
@@ -65,11 +65,10 @@ Each implementation step follows this cycle:
 
 After every code change, run all three (same as defined in `copilot-instructions.md`):
 ```
-dotnet build src/{{SolutionName}}.sln
-{{TestExePath}}
-dotnet format src/{{SolutionName}}.sln --verify-no-changes
+dotnet build src/MyApp.sln
+dotnet test
+dotnet format src/MyApp.sln --verify-no-changes
 ```
-`dotnet test` is not supported — use the `.exe` directly (`Microsoft.Testing.Platform` + .NET 10 SDK).
 
 ---
 
@@ -105,7 +104,7 @@ Plans live at `_plans/<FeatureName>.md` (repo root). Each step is one Red-Green-
 **RED** *(write this test first, run it, confirm it fails before writing production code)*:
 - Test file: `<path>`
 - Test method: `<MethodName>`
-- Failing-run command: `{{TestExePath}} --filter "<MethodName>"`
+- Failing-run command: `dotnet test --filter "<MethodName>"`
 
 **GREEN** *(minimal production code to make RED pass)*:
 - <What to implement — be specific about class names, interfaces, properties, method signatures>

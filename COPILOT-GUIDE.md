@@ -1,14 +1,8 @@
 # Copilot Customization — Developer Best Practice Guide
 
-This guide teaches you how to use the Copilot customizations shipped under `src/.github/` in this project. The goal is a **short-iteration, plan-driven development process** where Copilot acts as your pair programmer — but you stay in control at every gate.
+This guide teaches you how to use the Copilot customizations shipped under `.github/` in this project. The goal is a **short-iteration, plan-driven development process** where Copilot acts as your pair programmer — but you stay in control at every gate.
 
-> **Managed by `copilot-sync`**. The `.github/` files and this guide are maintained centrally and synchronized via the [`copilot-sync`](#3-getting-started--copilot-sync) dotnet tool. Run `copilot-sync update` to pull the latest templates; run `copilot-sync check` in CI to verify you're up to date.
-
-> **Recommended editor: Visual Studio Code.** As of March 2026, Visual Studio 2026 does not support agents, skills, or prompts — only instructions and scoped instructions are loaded. To get the full power of this guide (plan-driven workflow, `@planner`, `/build-feature`, `@code-analysis`, `@git`), use **VS Code with GitHub Copilot**. See [Section 6](#6-walkthrough--building-a-feature-visual-studio) for the Visual Studio fallback workflow.
->
-> **Tip — dual editor setup**: You can open the same solution in **both editors at the same time**: use VS Code for AI-guided development (planning, code generation, code analysis) and Visual Studio 2026 for debugging, profiling, and the visual designer. Both editors watch for file changes on disk, so edits made in one are picked up by the other.
-
-> **Optimized for Claude Sonnet 4.6.** All instruction files, agents, and skills follow [Anthropic prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) for Sonnet 4.6: XML tags on critical sections for unambiguous parsing, a role assignment, clear-but-not-aggressive language (Sonnet 4.6 follows normal instructions well — no need for `CRITICAL` / `MUST` / emoji emphasis), `<investigate_before_answering>` to reduce hallucinations, and minimal duplication across files to conserve tokens. If you switch to a different model, review the emphasis level and XML tag usage — older models may need stronger emphasis markers.
+> **Recommended editor: Visual Studio Code.** As of March 2026, Visual Studio 2026 does not support agents, skills, or prompts — only instructions and scoped instructions are loaded. To get the full power of this guide (plan-driven workflow, `@planner`, `/build-feature`, `@code-analysis`, `@git`), use **VS Code with GitHub Copilot**.
 
 ---
 
@@ -18,23 +12,18 @@ This guide teaches you how to use the Copilot customizations shipped under `src/
 /                              # repo root
 ├── _plans/                    # Feature implementation plans (@planner output, versioned in git)
 ├── _specs/                    # Feature specifications (user stories, acceptance criteria, data model)
-├── .copilotrc.json            # copilot-sync configuration (tokens, overrides)
-├── .copilot-sync/             # copilot-sync working directory (hashes, conflicts)
-├── src/                       # Solution source code
-│   └── .github/               # Copilot customizations (instructions, agents, skills, prompts)
-│       └── templates/         # Reusable templates (spec-template.md, ...)
+├── .github/                   # Copilot customizations (instructions, agents, skills, prompts)
+│   └── templates/             # Reusable templates (spec-template.md, ...)
 ├── README.md
 └── COPILOT-GUIDE.md           # ← this file
 ```
 
-> `_plans/` and `_specs/` live at the repo root — they are project-level documentation, not compiled code.
-
 ---
 
-## 2. What's in `src/.github/`?
+## 2. What's in `.github/`?
 
 ```
-src/.github/
+.github/
 ├── copilot-instructions.md              # Always-on rules — loaded in EVERY Copilot interaction
 ├── instructions/
 │   ├── tests.instructions.md            # Auto-loaded when editing files in src/Test/**
@@ -43,23 +32,22 @@ src/.github/
 │   ├── application-layer.instructions.md # Auto-loaded when editing src/Core/Application/**
 │   ├── persistence-layer.instructions.md # Auto-loaded when editing src/Core/Persistence/**
 │   ├── bff-controller.instructions.md   # Auto-loaded when editing src/Host/BFF/**
-│   ├── nservicebus.instructions.md      # Auto-loaded when editing NServiceBus handlers/contracts
 │   └── blazor-presentation.instructions.md # Auto-loaded when editing Presentation pages/ViewModels
 ├── agents/
 │   ├── planner.agent.md                 # @planner — creates _plans/<Name>.md, never writes code
 │   ├── code-analysis.agent.md           # @code-analysis — finds and fixes SA/CA/CS violations
 │   ├── sonar-review.agent.md            # @sonar-review — runs SonarQube analysis (read-only)
-│   └── git.agent.md                     # @git — branching, tagging, PRs, NIHDI GitFlow
+│   └── git.agent.md                     # @git — branching, tagging, PRs, GitFlow
 ├── skills/
 │   ├── build-feature/SKILL.md           # /build-feature — full vertical slice (7-layer recipe)
 │   ├── add-endpoint/SKILL.md            # /add-endpoint — add API endpoint to existing feature
-│   ├── add-nservicebus/SKILL.md         # /add-nservicebus — events, messages, handlers
 │   ├── add-blazor-page/SKILL.md        # /add-blazor-page — page + ViewModel + ServiceClient
 │   ├── fix-violations/SKILL.md          # /fix-violations — code analysis rule lookup & fixes
 │   └── e2e-test/SKILL.md               # /e2e-test — full-stack browser smoke test (manual only)
 └── prompts/
     └── new-feature.prompt.md            # Reusable prompt template for new features
 ```
+
 
 ### How each type works
 
@@ -110,59 +98,9 @@ It creates:
 
 ### Updating templates
 
-When a new version of the templates package is released:
-
-```bash
-copilot-sync update
-```
-
-The tool compares file hashes to detect conflicts:
-
-| Scenario | Result |
-|----------|--------|
-| File unchanged since last sync | Updated silently |
-| File locally modified | Conflict — incoming version saved to `.copilot-sync/conflicts/` for manual review |
-| File listed in `.copilotrc.json` overrides | Skipped entirely |
-| `--force` flag | Overwrites everything (except overrides) |
-
-### CI check
-
-Add to your build pipeline:
-
-```bash
-copilot-sync check
-```
-
-Exits with code 1 if templates are outdated, code 0 if everything is current.
-
-### Configuration — `.copilotrc.json`
-
-```json
-{
-  "version": "1.0.0",
-  "packageVersion": "1.0.0",
-  "tokens": {
-    "SolutionName": "{{SolutionName}}",
-    "NamespaceRoot": "{{NamespaceRoot}}",
-    "DbContextName": "{{DbContextName}}",
-    "TestExePath": "{{TestExePath}}",
-    "SonarProjectKey": "(your SonarQube key)",
-    "SonarServerUrl": "https://sonarcube-sp01.riziv.dcs"
-  },
-  "overrides": [],
-  "lastSyncedAt": "2026-03-12T10:00:00Z"
-}
-```
-
-> **Overrides**: Add a file's relative path (e.g., `src/.github/skills/e2e-test/SKILL.md`) to the `overrides` array if you've customized it for your project and don't want future updates to overwrite it.
-
-### After init — fine-tune with `/init`
-
-Run the built-in VS Code Copilot prompt `/init` to let Copilot explore your codebase and refine `copilot-instructions.md` further. The token-replaced version from `copilot-sync` gives Copilot the correct names; `/init` fills in project-specific conventions that aren't captured by tokens (e.g., which features exist, custom DI modules, or non-standard folder structures).
-
 ---
 
-## 4. The Development Process — Plan-Driven, Short Iterations
+## 3. The Development Process — Plan-Driven, Short Iterations
 
 This is the core workflow. Every feature follows the same cycle:
 
@@ -182,6 +120,7 @@ This is the core workflow. Every feature follows the same cycle:
  │  6. @git — branch, commit, PR                    │
  └─────────────────────────────────────────────────┘
 ```
+
 
 ### Step 0 — Feature Spec (`_specs/`)
 
@@ -203,13 +142,7 @@ Before planning, you can capture **what** a feature should do in `_specs/<Name>.
 | **Data model** | ✅ Conceptual (entity, properties, relationships) | ✅ EF config, SQL DDL, column types, FK constraint names |
 | **API endpoints** | ✅ Routes, params, request/response shapes | ✅ Controller class, attributes, DI injections |
 | **Business rules** | ✅ Rule + error message only | ✅ Which class/method enforces it |
-| **Events** | ✅ Trigger, payload summary, side effects | ✅ C# record types, handler classes, NServiceBus wiring |
-| **UI** | ✅ User flow, page purpose | ✅ MudBlazor components, ViewModel bindings, Refit clients |
-| **File paths** | ❌ | ✅ Every file to create/modify |
-| **RED-GREEN-REFACTOR** | ❌ | ✅ Test-first cycles per step |
-| **Human gates** | ❌ | ✅ Checkboxes per step |
-
-> **Rule of thumb**: If you mention a C# class name, a MudBlazor component, a file path, or a Scrutor registration — it belongs in the **plan**, not the spec.
+**Rule of thumb**: If you mention a C# class name, a MudBlazor component, a file path, or a Scrutor registration — it belongs in the **plan**, not the spec.
 
 ### When is a plan required?
 
@@ -311,7 +244,7 @@ The skill guides Copilot through the exact code templates for each layer. The ma
 You:     @git Create a feature branch and commit
 ```
 
-The git agent knows your NIHDI GitFlow strategy: `feature/*` from `dev`, PRs, tagging on `main` only.
+The git agent knows your GitFlow strategy: `feature/*` from `dev`, PRs, tagging on `main` only.
 
 ---
 
@@ -328,8 +261,7 @@ Visual Studio loads `copilot-instructions.md` automatically, **and** loads scope
 | `src/Core/Domain/**` | `domain-entity.instructions.md` | `IEntity`, plain C#, no EF attributes |
 | `src/Core/Application/**` | `application-layer.instructions.md` | Commands, handlers, queries, `Result<T>` |
 | `src/Core/Persistence/**` | `persistence-layer.instructions.md` | `BaseRepository<T>`, `IEntityTypeConfiguration<T>` |
-| `src/Host/BFF/**` | `bff-controller.instructions.md` | Controller pattern, audit logging, NServiceBus handlers |
-| NServiceBus handlers/contracts | `nservicebus.instructions.md` | Events vs messages, handler error pattern |
+| `src/Host/BFF/**` | `bff-controller.instructions.md` | Controller pattern, audit logging |
 | Presentation pages/ViewModels | `blazor-presentation.instructions.md` | ViewModel lifecycle, MudBlazor, `IsBusy` guard |
 | `src/Test/**` | `tests.instructions.md` | MSTest, AAA, Moq, integration test factory |
 | ServiceClients/Services | `refit-client.instructions.md` | Refit patterns, DTO→Model mapping |
@@ -381,12 +313,6 @@ Skills are on-demand — invoke them by name when you need a specific recipe.
 **When**: Adding an API endpoint to an **existing** feature (no new entity/table).
 ```
 /add-endpoint GET endpoint to retrieve items by category
-```
-
-### /add-nservicebus
-**When**: Adding events, messages, or handlers.
-```
-/add-nservicebus Publish ItemCreatedEvent when an item is registered
 ```
 
 ### /add-blazor-page
@@ -447,8 +373,7 @@ These load automatically when you edit files matching their `applyTo` pattern:
 | `domain-entity.instructions.md` | Any file in `src/Core/Domain/**` | Entity conventions, `IEntity`, plain C#, no EF attributes |
 | `application-layer.instructions.md` | Any file in `src/Core/Application/**` | Commands, handlers, queries, `Result<T>`, `IMessagingService` |
 | `persistence-layer.instructions.md` | Any file in `src/Core/Persistence/**` | `BaseRepository<T>`, `IEntityTypeConfiguration<T>`, `AsNoTracking()` |
-| `bff-controller.instructions.md` | Any file in `src/Host/BFF/**` | Controller pattern, `Result<T>` → HTTP, audit logging, NServiceBus handlers |
-| `nservicebus.instructions.md` | NServiceBus handlers and contracts | Events (record) vs messages (class), handler error pattern, `IMessagingService` |
+| `bff-controller.instructions.md` | Any file in `src/Host/BFF/**` | Controller pattern, `Result<T>` → HTTP, audit logging |
 | `blazor-presentation.instructions.md` | Presentation pages, ViewModels, dialogs | ViewModel lifecycle, `IsBusy` guard, MudBlazor, `IStringLocalizer` |
 
 You don't need to invoke these — they activate automatically and add context to Copilot's responses.
@@ -477,60 +402,22 @@ These are enforced in every Copilot interaction (from `copilot-instructions.md`)
 | Write production code before tests | RED first — failing test, then GREEN |
 | Batch multiple steps | One step per reply, HUMAN GATE between each |
 | Register services in Program.cs | Use `*Module` classes with Scrutor |
-| Call `IMessageSession` from Application | Use `IMessagingService` abstraction |
 | Skip `CancellationToken` | Propagate on every async call |
 | Throw for validation errors | Return `Result<T>` |
 | Push without build+test+format | Always verify before push |
 
----
+### Customizing for Your Project
 
-## 11. Customizing for Your Project
-
-### Token-based customization via `copilot-sync`
-
-When `copilot-sync init` runs, it replaces six tokens across all template files:
-
-| Token | Used in | Purpose |
-|-------|---------|---------|
-| `SolutionName` | Solution file refs, project paths, commands | `{{SolutionName}}.sln` |
-| `NamespaceRoot` | Namespace references, NuGet package names, project names | `{{NamespaceRoot}}.Core.Domain` |
-| `DbContextName` | EF Core DbContext references | `{{DbContextName}}` |
-| `TestExePath` | Test commands in build/verify steps | `{{TestExePath}}` |
-| `SonarProjectKey` | SonarQube analysis agent | Project-specific key |
-| `SonarServerUrl` | SonarQube server connection | Server URL |
-
-### Overriding specific files
-
-If you've customized a file (e.g., your `/e2e-test` skill has project-specific port numbers), add it to the `overrides` array in `.copilotrc.json`:
-
-```json
-{
-  "overrides": [
-    "src/.github/skills/e2e-test/SKILL.md"
-  ]
-}
-```
-
-The `copilot-sync update` command will skip these files entirely.
-
-### What's NOT tokenized
-
-Framework references (`Nihdi.Core.Configuration`, `Nihdi.Core.Functional`) are intentionally NOT tokenized — they are shared libraries used across all NIHDI projects.
+You can customize these files for your own project by editing them directly. If you want to add project-specific conventions, markers, or rules, consider adding them to the appropriate instruction or agent file.
 
 ### Adding project-specific customizations
 
 | To add | Where | How |
 |--------|-------|-----|
-| New skill | `src/.github/skills/<name>/SKILL.md` | Create with YAML frontmatter, add to overrides |
-| New agent | `src/.github/agents/<name>.agent.md` | Create with YAML frontmatter, add to overrides |
-| New scoped instruction | `src/.github/instructions/<name>.instructions.md` | Create with `applyTo` in frontmatter, add to overrides |
-| Project convention | `src/.github/copilot-instructions.md` | Edit directly, add to overrides if heavily customized |
-
-> **After adding to overrides**, `copilot-sync update` will not touch those files — your customizations are safe.
-
-### Reference feature — no hardcoded default
-
-No feature name is hardcoded as the default reference. The `@planner` agent and `/build-feature` skill ask which existing feature to use as the pattern. If your team always uses the same reference, mention it in `copilot-instructions.md` under "New Feature Workflow".
+| New skill | `.github/skills/<name>/SKILL.md` | Create with YAML frontmatter |
+| New agent | `.github/agents/<name>.agent.md` | Create with YAML frontmatter |
+| New scoped instruction | `.github/instructions/<name>.instructions.md` | Create with `applyTo` in frontmatter |
+| Project convention | `.github/copilot-instructions.md` | Edit directly |
 
 ---
 
@@ -548,10 +435,10 @@ No feature name is hardcoded as the default reference. The `@planner` agent and 
 
 6. **Combine agents** — `@planner` → code → `@code-analysis` → `@sonar-review` → `@git` is the full pipeline.
 
-7. **Trust the instructions** — If Copilot suggests something that violates the Critical Rules, it means the instructions aren't loaded. Check that `src/.github/copilot-instructions.md` exists.
+7. **Trust the instructions** — If Copilot suggests something that violates the Critical Rules, it means the instructions aren't loaded. Check that `.github/copilot-instructions.md` exists.
 
 8. **Keep plans in `_plans/<Name>.md`** — Named plan files persist across sessions and can be reviewed in PRs.
 
-9. **Keep `copilot-sync` updated** — Run `copilot-sync update` periodically (or after a colleague shares a new template version) to get improvements to agents, skills, and instructions.
+9. **Keep your templates updated** — improvement to agents, skills, and instructions are made periodically.
 
 10. **Visual Studio users** — As of March 2026, VS 2026 lacks agent/skill/prompt support. Copy the Critical Rules and Anti-Pattern table to a sticky note — these are your guardrails. Consider switching to **VS Code** for the full workflow.

@@ -7,7 +7,7 @@ applyTo: "src/Presentation/**/Pages/**,src/Presentation/**/ViewModels/**,src/Pre
 ## ViewModel Pattern
 
 ```csharp
-namespace {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
+namespace MyApp.Presentation.<Feature>.ViewModels;
 
 public interface I<Feature>ViewModel
 {

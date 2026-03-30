@@ -1,12 +1,12 @@
 ---
 name: e2e-test
-description: "Use when running end-to-end browser tests against the full {{SolutionName}} stack (STS + BFF + WFE + Azurite). Provides the exact launch sequence, port map, health-check procedure, Playwright MCP navigation and assertion patterns, and teardown steps. Use for: smoke-testing a feature in the browser, verifying a page renders after implementation, checking auth flows, validating empty/populated states."
+description: "Use when running end-to-end browser tests against the full MyApp stack (STS + BFF + WFE + Azurite). Provides the exact launch sequence, port map, health-check procedure, Playwright MCP navigation and assertion patterns, and teardown steps. Use for: smoke-testing a feature in the browser, verifying a page renders after implementation, checking auth flows, validating empty/populated states."
 argument-hint: "Describe the scenario, e.g. 'verify /new-appointment page loads and shows doctor dropdown'"
 ---
 
 # E2E Test — Full-Stack Browser Testing Skill
 
-Run end-to-end browser tests against the running {{SolutionName}} stack using the **Playwright MCP** tools.
+Run end-to-end browser tests against the running MyApp stack using the **Playwright MCP** tools.
 
 ## Prerequisites
 
@@ -95,11 +95,10 @@ The STS TestServer auto-issues tokens for a hardcoded test user — **no interac
 
 | Claim | Value |
 |-------|-------|
-| `name` | `gv10141@riziv.org` |
-| `email` | `geoffrey.vandiest@riziv-inami.fgov.be` |
+| `name` | `user@example.org` |
+| `email` | `user@example.org` |
 | `uid` | `123456789` |
-| `national_register_number` | `12345678912` |
-| `account_name` | `gv10141` |
+| `account_name` | `user101` |
 
 If the STS presents a login form, the credentials are pre-filled — just submit.
 

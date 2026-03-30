@@ -1,8 +1,8 @@
 ---
-description: "Use when writing, reviewing, or generating unit tests or integration tests. Covers MSTest conventions, AAA structure, Moq usage, integration test factory pattern, and test folder layout for {{SolutionName}}."
+description: "Use when writing, reviewing, or generating unit tests or integration tests. Covers MSTest conventions, AAA structure, Moq usage, integration test factory pattern, and test folder layout."
 applyTo: "src/Test/**"
 ---
-# Test Conventions — {{SolutionName}}
+# Test Conventions
 
 ## Frameworks
 - **MSTest** + **Moq** for all tests. Test runner: `Microsoft.Testing.Platform`.
@@ -70,7 +70,7 @@ public sealed class GetDoctorsQueryTests
 Test/Integration/
   Infrastructure/
     CustomWebApplicationFactory.cs      # bootstraps SQLite + TestAuthenticationHandler
-    {{DbContextName}}Extensions.cs   # SeedDatabase()
+    AppDbContextExtensions.cs   # SeedDatabase()
   Endpoints/
     <Feature>/                          # one folder per controller
   Basic/                                # infrastructure health tests
@@ -115,7 +115,7 @@ public class GetDoctorsTest : IDisposable
 ```
 
 - `CustomWebApplicationFactory` uses SQLite in-memory and `TestAuthenticationHandler` (auth bypassed).
-- Seed via `_factory.SeedTestDataAsync()` → calls `{{DbContextName}}Extensions.SeedDatabase()`.
+- Seed via `_factory.SeedTestDataAsync()` → calls `AppDbContextExtensions.SeedDatabase()`.
 - Auth disabled via `appsettings.UnitTest.json` (`"EnableAuthentication": false`) or environment `Testing`.
 - Add service mocks (`IClockService`, `IMessagingService`, etc.) **only when the specific test scenario requires them**.
 

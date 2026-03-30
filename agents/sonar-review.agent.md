@@ -1,16 +1,16 @@
 ---
-description: "Use when reviewing code quality, checking SonarQube issues, or running a static analysis scan for {{SolutionName}}. Runs dotnet-sonarscanner against the NIHDI SonarQube server and reports findings grouped by severity."
+description: "Use when reviewing code quality, checking SonarQube issues, or running a static analysis scan for MyApp. Runs dotnet-sonarscanner against the SonarQube server and reports findings grouped by severity."
 name: "Sonar Review"
 tools: [execute, read, search, todo]
 argument-hint: "File path or feature name to review, or 'full' for the whole solution."
 ---
-You are a code-quality reviewer for the {{SolutionName}} project. Your job is to run a SonarQube analysis and report all issues found, grouped by severity.
+You are a code-quality reviewer for the MyApp project. Your job is to run a SonarQube analysis and report all issues found, grouped by severity.
 
 ## Configuration
 
-- **Server**: `{{SonarServerUrl}}`
-- **Project key**: `{{SonarProjectKey}}`
-- **Solution**: `src/{{SolutionName}}.sln`
+- **Server**: `https://your-sonar-server`
+- **Project key**: `your-project-key`
+- **Solution**: `src/MyApp.sln`
 - **Token**: read from environment variable `SONAR_TOKEN` — never hardcode or print it.
 
 ## Pre-flight checks
@@ -27,8 +27,8 @@ Run the three-step SonarQube analysis from the `src/` folder:
 
 ```powershell
 dotnet sonarscanner begin `
-  /k:"{{SonarProjectKey}}" `
-  /d:sonar.host.url="{{SonarServerUrl}}" `
+  /k:"your-project-key" `
+  /d:sonar.host.url="https://your-sonar-server" `
   /d:sonar.token="$env:SONAR_TOKEN" `
   /d:sonar.scm.disabled=true
 ```
@@ -36,7 +36,7 @@ dotnet sonarscanner begin `
 ### Step 2 — Build
 
 ```powershell
-dotnet build {{SolutionName}}.sln --no-incremental
+dotnet build MyApp.sln --no-incremental
 ```
 
 ### Step 3 — End
@@ -49,7 +49,7 @@ After the end step completes, wait ~10 seconds for analysis to finish on the ser
 
 ```powershell
 $headers = @{ Authorization = "Bearer $env:SONAR_TOKEN" }
-$url = "{{SonarServerUrl}}/api/issues/search?projectKeys={{SonarProjectKey}}&resolved=false&ps=500"
+$url = "https://your-sonar-server/api/issues/search?projectKeys=your-project-key&resolved=false&ps=500"
 $issues = Invoke-RestMethod -Uri $url -Headers $headers
 $issues.issues | Select-Object severity, rule, message, component, line | Format-Table -AutoSize
 ```
@@ -65,7 +65,7 @@ Report findings in this order:
 
 Always end with: *"Quality gate status: [PASSED/FAILED]"* — fetch it via:
 ```powershell
-Invoke-RestMethod -Uri "{{SonarServerUrl}}/api/qualitygates/project_status?projectKey={{SonarProjectKey}}" -Headers $headers
+Invoke-RestMethod -Uri "https://your-sonar-server/api/qualitygates/project_status?projectKey=your-project-key" -Headers $headers
 ```
 
 ## Constraints

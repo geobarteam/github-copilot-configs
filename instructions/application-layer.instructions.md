@@ -7,7 +7,7 @@ applyTo: "src/Core/Application/**"
 ## Commands
 
 ```csharp
-namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Commands.<Action>;
+namespace MyApp.Core.Application.Functionalities.<Feature>.Commands.<Action>;
 
 public record <Entity><Action>Command(string Name, int DoctorId);
 ```
@@ -17,7 +17,6 @@ public record <Entity><Action>Command(string Name, int DoctorId);
 ```csharp
 public class <Entity><Action>Handler(
     I<Entity>Repository <entity>Repository,
-    IMessagingService messagingService,
     ILogger<<Entity><Action>Handler> logger) : ICommandHandler<<Entity><Action>Command, <Entity>Dto>
 {
     public async Task<Result<<Entity>Dto>> Execute(<Entity><Action>Command command, CancellationToken ct)
@@ -44,7 +43,7 @@ public class <Entity><Action>Handler(
 
 ```csharp
 // Interface
-namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Queries.<Action>;
+namespace MyApp.Core.Application.Functionalities.<Feature>.Queries.<Action>;
 
 public interface IGet<Entity>Query
 {
@@ -64,7 +63,7 @@ public class Get<Entity>Query(I<Entity>Repository <entity>Repository) : IGet<Ent
 ## Repository Interfaces
 
 ```csharp
-namespace {{NamespaceRoot}}.Core.Application.Shared.Interfaces.Persistence.Repositories;
+namespace MyApp.Core.Application.Shared.Interfaces.Persistence.Repositories;
 
 public interface I<Entity>Repository : IRepository<<Entity>>
 {
@@ -80,7 +79,6 @@ public interface I<Entity>Repository : IRepository<<Entity>>
 - `CancellationToken` on every async method.
 - Application may reference Domain and Contracts only. **Never reference Persistence, Infrastructure, or Host.**
 - DI registration: `*Query` and `*Handler` are scoped (registered via `ApplicationModule` + Scrutor).
-- Use `IMessagingService` for NServiceBus — never `IMessageSession` directly.
 
 ## File Locations
 

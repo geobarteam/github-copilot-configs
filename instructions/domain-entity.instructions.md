@@ -7,7 +7,7 @@ applyTo: "src/Core/Domain/**"
 ## Entity Pattern
 
 ```csharp
-namespace {{NamespaceRoot}}.Core.Domain.Functionalities.<Feature>;
+namespace MyApp.Core.Domain.Functionalities.<Feature>;
 
 public class <Entity> : IEntity
 {

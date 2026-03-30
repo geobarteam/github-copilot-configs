@@ -2,7 +2,7 @@
 description: "Use when creating, modifying, or reviewing Refit HTTP service clients, feature services, or the CookieHandler/XSRF pipeline. Covers the WASM → Cfe BFF client pattern, DTO mapping, and registration conventions."
 applyTo: "src/Presentation/**/ServiceClients/**,src/Presentation/**/Services/**,src/Infrastructure/Http/**"
 ---
-# Refit + BFF Client Pattern — {{SolutionName}}Wasm
+# Refit + BFF Client Pattern
 
 ## Architecture
 
@@ -29,9 +29,9 @@ Razor Page → ViewModel → IFeatureService → IFeatureServiceClient (Refit) �
 Reference: `IDoctorServiceClient.cs`
 
 ```csharp
-namespace {{NamespaceRoot}}Wasm.Presentation.Shared.ServiceClients.Bff;
+namespace MyApp.Presentation.Shared.ServiceClients.Bff;
 
-using {{NamespaceRoot}}Wasm.Contracts.<Feature>;
+using MyApp.Contracts.<Feature>;
 using Refit;
 
 public interface I<Feature>ServiceClient
@@ -88,12 +88,11 @@ The token is populated by `BffAuthenticationStateProvider` from the Cfe's user e
 Reference: `DoctorsService.cs`
 
 ```csharp
-namespace {{NamespaceRoot}}Wasm.Presentation.<Feature>.Services;
+namespace MyApp.Presentation.<Feature>.Services;
 
-using Nihdi.Core.Functional;
-using {{NamespaceRoot}}Wasm.Contracts.<Feature>;
-using {{NamespaceRoot}}Wasm.Presentation.<Feature>.Models;
-using {{NamespaceRoot}}Wasm.Presentation.Shared.ServiceClients.Bff;
+using MyApp.Contracts.<Feature>;
+using MyApp.Presentation.<Feature>.Models;
+using MyApp.Presentation.Shared.ServiceClients.Bff;
 
 public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Service
 {
@@ -116,7 +115,7 @@ public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Servic
 
 - Constructor-inject the Refit interface. Use primary constructor syntax.
 - Map DTO → Model in the service. ViewModels never see DTOs.
-- Return `Result<T>` (from `Nihdi.Core.Functional`) for operations that can fail with business errors.
+- Return `Result<T>` for operations that can fail with business errors.
 - Return plain collections for read operations.
 - **No registration needed** — Scrutor auto-registers classes ending in `Service` as transient via `PresentationModule`.
 
@@ -125,7 +124,7 @@ public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Servic
 Models are plain C# classes or records in `Presentation/<Feature>/Models/`. They are the UI-facing representation — no framework dependencies.
 
 ```csharp
-namespace {{NamespaceRoot}}Wasm.Presentation.<Feature>.Models;
+namespace MyApp.Presentation.<Feature>.Models;
 
 public class <Feature>Model
 {

@@ -128,35 +128,6 @@ Task<<Entity>DetailDto> Get<Entity>ByIdAsync(
     CancellationToken cancellationToken = default);
 ```
 
-### 6. Register the Refit Client (only for new client interfaces)
-
-If you created a **new** `I<Feature>Client.cs` interface (not just added a method to an existing one), register it in `BffClientConfigurator`.
-
-**How Refit/HttpClient DI works in this project:**
-
-```
-appsettings.json
-  └─ Nihdi.HttpClientServiceRegistry.{{SolutionName}}-bff  (BaseAddress, AddClientAccessToken, TimeoutInSeconds)
-       └─ HttpClientServicesNames.{{SolutionName}}BFF = "{{SolutionName}}-bff"
-            └─ ConfigurePresentationServices.Configure{{SolutionName}}PresentationServices()
-                 └─ BffClientConfigurator.ConfigureBffServiceClient()
-                      └─ services.AddNihdiRefitClient<I<Feature>Client>(httpServiceConfiguration, ConfigureDefaultHeaders)
-                           └─ AddNihdiHttpServiceClient + RestService.For<T>(httpClient, DefaultRefitSettings)
-                           └─ UserContextHeaderHandler (adds user context headers for audit/GDPR)
-```
-
-Add one line in `src/Presentation/Shared/ServiceClients/Bff/BffClientConfigurator.cs` → `ConfigureBffServiceClient()`:
-
-```csharp
-services.AddNihdiRefitClient<I<Feature>Client>(httpServiceConfiguration, ConfigureDefaultHeaders);
-```
-
-**Do NOT** create your own `HttpClient` or call `AddRefitClient` directly — the `AddNihdiRefitClient<T>` helper handles:
-- Token management (`AddClientAccessToken` from config)
-- Base address resolution from `HttpClientServiceRegistry`
-- `SystemTextJsonContentSerializer` with camelCase policy
-- `UserContextHeaderHandler` for audit/GDPR headers
-
 ### 7. ServiceClient Method
 
 Add to `src/Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs`:
@@ -251,16 +222,6 @@ public async Task<ActionResult> <Action>([FromBody] <Action><Entity>Dto dto, Can
         throw;
     }
 }
-```
-
-### 3. Transactional Session
-
-If the command publishes NServiceBus events, add `[RequiresTransactionalSession]` to the action:
-
-```csharp
-[HttpPost]
-[RequiresTransactionalSession]
-public async Task<ActionResult> <Action>(...) { ... }
 ```
 
 ---

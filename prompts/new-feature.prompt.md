@@ -5,7 +5,7 @@ tools: ["read", "edit", "search", "execute", "todo", "agent"]
 ---
 # New Vertical Slice Feature
 
-You are building a new feature end-to-end in the {{SolutionName}}Wasm project. Follow the **Canonical Recipe (§9)** from copilot-instructions.md — one Red → Green → Refactor cycle per step.
+You are building a new feature end-to-end in the MyApp project. Follow the **Canonical Recipe (§9)** from copilot-instructions.md — one Red → Green → Refactor cycle per step.
 
 ## Input
 

@@ -7,9 +7,9 @@ applyTo: "src/Core/Persistence/**"
 ## Repository
 
 ```csharp
-namespace {{NamespaceRoot}}.Core.Persistence.Repositories;
+namespace MyApp.Core.Persistence.Repositories;
 
-public class <Entity>Repository({{DbContextName}} dbContext)
+public class <Entity>Repository(AppDbContext dbContext)
     : BaseRepository<<Entity>>(dbContext), I<Entity>Repository
 {
     public async Task<IReadOnlyList<<Entity>>> GetBy<Criteria>Async(string value)
@@ -26,7 +26,7 @@ public class <Entity>Repository({{DbContextName}} dbContext)
 ## Entity Configuration
 
 ```csharp
-namespace {{NamespaceRoot}}.Core.Persistence.EntityTypeConfigurations;
+namespace MyApp.Core.Persistence.EntityTypeConfigurations;
 
 public class <Entity>Configuration : IEntityTypeConfiguration<<Entity>>
 {
@@ -46,7 +46,7 @@ public class <Entity>Configuration : IEntityTypeConfiguration<<Entity>>
 
 ## DbSet Registration
 
-Add to `{{DbContextName}}`:
+Add to `AppDbContext`:
 
 ```csharp
 public DbSet<<Entity>> <Entity>s { get; set; }

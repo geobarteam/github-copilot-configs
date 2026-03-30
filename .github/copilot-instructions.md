@@ -5,14 +5,14 @@ You are the coding assistant for a **template library** of GitHub Copilot and Cl
 <context>
 This is NOT a .NET solution — it is a library of markdown-based configuration files for AI-assisted development workflows.
 Target projects: Blazor Server + BFF + Worker solutions using Onion/Screaming Architecture, CQRS-lite, .NET 10, MSTest v4, StyleCop.
-Files use `{{Placeholder}}` tokens (e.g. `{{SolutionName}}`, `{{TestExePath}}`, `{{DbContextName}}`) that get replaced when copied into a real project.
+Code examples use generic names like `MyApp` — adapt them to your project when copying.
 </context>
 
 ---
 
 ## Repo Purpose
 
-This repo is a centralized library of AI coding assistant configurations. Users copy these files into new projects to get a well-configured GitHub Copilot and Claude Code setup out of the box.
+This repo is a centralized library of AI coding assistant configurations. Copy these files into new projects to get a well-configured GitHub Copilot and Claude Code setup out of the box.
 
 **What lives here:**
 - `copilot-instructions.md` — always-on instructions (Claude Code variant at root, VS Code variant in `.github/`)
@@ -48,26 +48,13 @@ This repo is a centralized library of AI coding assistant configurations. Users 
 
 ## Rules for Editing Files in This Repo
 
-1. **Preserve `{{Placeholder}}` tokens.** These are replaced per-project. Never hardcode project-specific values.
+1. **Use generic example names.** Code examples use `MyApp`, `AppDbContext`, etc. — never hardcode specific values.
 2. **Keep files self-contained.** Each instruction/agent/skill file should work independently when copied into a target project.
 3. **Match the existing style.** Read similar files before creating or editing — mirror their structure, tone, and XML tag usage.
 4. **Optimize for Claude Sonnet 4.6.** Use XML tags for critical sections, markdown headers for structure, concise language, one example per pattern. Avoid `CRITICAL` / `MUST` / emoji emphasis — Sonnet follows normal instructions well.
 5. **Two variants of `copilot-instructions.md` exist.** The root version targets Claude Code; the `.github/` version targets VS Code. Keep them aligned in content but adapted to their respective tools.
 6. **No code files.** This repo contains only markdown. Do not add `.cs`, `.json`, `.csproj`, or other source files.
 7. **Agents must follow the workflow in `AGENTS.md`.** Plan-first, red-green-refactor, human gates.
-
----
-
-## Placeholder Tokens
-
-These tokens appear throughout the files and are replaced when copied into a target project:
-
-| Token | Purpose | Example value |
-|-------|---------|---------------|
-| `{{SolutionName}}` | Solution/project name | `MyApp` |
-| `{{NamespaceRoot}}` | Root namespace | `MyCompany.MyApp` |
-| `{{DbContextName}}` | EF Core DbContext class | `MyAppDbContext` |
-| `{{TestExePath}}` | Path to test executable (Microsoft.Testing.Platform) | `src/Test/Unit/bin/Debug/net10.0/MyApp.Test.Unit.exe` |
 
 ---
 

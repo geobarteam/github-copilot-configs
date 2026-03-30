@@ -156,7 +156,8 @@ public record Add<Entity>Command(string Name, string Email)
 ```csharp
 namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Commands.<Action>;
 
-using Nihdi.Core.Functional;
+using MyApp.Core.Application.Shared.Interfaces.Persistence.Repositories;
+using MyApp.Core.Domain.Shared.Entities;
 
 public class Add<Entity>CommandHandler(I<Entity>Repository repository)
     : ICommandHandler<Add<Entity>Command, Result<Unit>>
@@ -410,10 +411,9 @@ DI: auto-registered by `PresentationModule` (suffix `ViewModel` → Transient).
 ## Key Reminders
 
 - **ICommandHandler<TCommand, TResult>** is the Application-layer command interface. Handlers are auto-scanned.
-- **Result<T>** from `Nihdi.Core.Functional` — constructor `new Result<T>(value)` for success, `new Result<T>("error msg")` for failure. Check `result.IsSuccess`.
-- **Unit** from `Nihdi.Core.Functional` — use `Unit.Default()` for void-equivalent returns.
+- **Result<T>** — constructor `new Result<T>(value)` for success, `new Result<T>("error msg")` for failure. Check `result.IsSuccess`.
+- **Unit** — use `Unit.Default()` for void-equivalent returns.
 - **ApiException** — catch in ServiceClient, convert via `ex.ConvertApiExceptionToResult<T>()`.
 - **BaseRepository<T>** — provides `AddAsync`, `GetByIdAsync`, `ListAllAsync`, `Update`, `Delete`, `SaveChangesAsync`.
-- **DbSet registration** — add `DbSet<<Entity>>` to `{{DbContextName}}`.
-- **Copyright header** — all files need: `// <copyright file="<File>.cs" company="Riziv-Inami"> ... </copyright>`
+- **DbSet registration** — add `DbSet<<Entity>>` to `AppDbContext`.
 - **CancellationToken** — propagate on every async call in controllers. Handlers may omit if not needed by repository.

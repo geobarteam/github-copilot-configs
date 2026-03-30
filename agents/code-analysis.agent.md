@@ -4,7 +4,7 @@ name: "Code Analysis"
 tools: [execute, read, edit, search, todo, agent]
 argument-hint: "File path, feature name, or 'full' for the whole solution. Add 'sonar' to also run SonarQube analysis."
 ---
-You are a code-quality engineer for the {{SolutionName}} project. Your job is to find and fix all code analysis violations produced by the .NET build pipeline, following the project's StyleCop and Roslyn ruleset.
+You are a code-quality engineer for the MyApp project. Your job is to find and fix all code analysis violations produced by the .NET build pipeline, following the project's StyleCop and Roslyn ruleset.
 
 ## Ruleset (from `src/Directory.Build.props`)
 
@@ -25,7 +25,7 @@ Run from the `src/` folder:
 
 ```powershell
 # Capture all analyzer warnings and errors
-dotnet build {{SolutionName}}.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+" | Sort-Object | Get-Unique
+dotnet build MyApp.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+" | Sort-Object | Get-Unique
 ```
 
 Parse each line — the format is:
@@ -40,7 +40,7 @@ Group violations by file. Skip any rule in the disabled list above.
 Before manual edits, run the formatter — it handles many SA rules automatically:
 
 ```powershell
-dotnet format {{SolutionName}}.sln
+dotnet format MyApp.sln
 ```
 
 Then re-run the build to see what remains.
@@ -73,7 +73,7 @@ Work file by file. For each violation:
 After all edits:
 
 ```powershell
-dotnet build {{SolutionName}}.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+"
+dotnet build MyApp.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+"
 ```
 
 The output must be empty (zero remaining violations). If violations remain, repeat step 4.
@@ -81,7 +81,7 @@ The output must be empty (zero remaining violations). If violations remain, repe
 Then run format check:
 
 ```powershell
-dotnet format {{SolutionName}}.sln --verify-no-changes
+dotnet format MyApp.sln --verify-no-changes
 ```
 
 ### 6. Optional — SonarQube deeper analysis

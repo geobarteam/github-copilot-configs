@@ -6,12 +6,12 @@ argument-hint: "Rule code or description, e.g. 'SA1210', 'fix all warnings', 'CA
 
 # Fix Violations — Code Analysis Quick Reference
 
-Fix .NET analyzer violations in {{SolutionName}}. Run `dotnet format` first, then fix remaining issues manually.
+Fix .NET analyzer violations in MyApp. Run `dotnet format` first, then fix remaining issues manually.
 
 ## Step 1 — Auto-fix with `dotnet format`
 
 ```powershell
-dotnet format src/{{SolutionName}}.sln
+dotnet format src/MyApp.sln
 ```
 
 This resolves many SA rules automatically (whitespace, spacing, ordering).
@@ -19,7 +19,7 @@ This resolves many SA rules automatically (whitespace, spacing, ordering).
 ## Step 2 — Collect remaining violations
 
 ```powershell
-dotnet build src/{{SolutionName}}.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+" | Sort-Object | Get-Unique
+dotnet build src/MyApp.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+" | Sort-Object | Get-Unique
 ```
 
 Output format: `<FilePath>(<line>,<col>): warning <RuleId>: <Message> [<project>]`
@@ -86,7 +86,7 @@ Key disabled rules to remember:
 ## Step 4 — Verify
 
 ```powershell
-dotnet build src/{{SolutionName}}.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+"
+dotnet build src/MyApp.sln 2>&1 | Select-String -Pattern ": (warning|error) (SA|SX|CA|CS|MSTEST)\d+"
 ```
 
 Output must be empty. If violations remain, repeat Step 3.
