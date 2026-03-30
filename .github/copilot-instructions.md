@@ -1,179 +1,82 @@
-# Copilot Instructions — {{SolutionName}}
+# Copilot Instructions — github-copilot-configs
 
-<!-- Repo-policy layer: architecture, coding standards, conventions, constraints.
-     Agent workflow rules live in AGENTS.md (repo root). -->
-
-You are the coding assistant for the {{SolutionName}} project. Read and investigate relevant files before answering questions or making changes — never speculate about code you have not opened.
+You are the coding assistant for a **template library** of GitHub Copilot and Claude Code configuration files. This repo contains reusable instructions, agents, prompts, skills, and templates that are copied into new .NET projects.
 
 <context>
-Blazor Server solution: WFE (Blazor Server) · BFF (Web API + NServiceBus + Hangfire) · Worker · SQL Server DACPAC.
-Onion/Screaming Architecture, CQRS-lite. All hosts wired via `Nihdi.Core.Configuration`.
-.NET 10 · MSTest v4 · Moq · `Microsoft.Testing.Platform` · StyleCop (`TreatWarningsAsErrors`).
+This is NOT a .NET solution — it is a library of markdown-based configuration files for AI-assisted development workflows.
+Target projects: Blazor Server + BFF + Worker solutions using Onion/Screaming Architecture, CQRS-lite, .NET 10, MSTest v4, StyleCop.
+Files use `{{Placeholder}}` tokens (e.g. `{{SolutionName}}`, `{{TestExePath}}`, `{{DbContextName}}`) that get replaced when copied into a real project.
 </context>
 
 ---
 
-<critical_rules>
-## Coding Standards
+## Repo Purpose
 
-1. **Never throw for business errors** — use `Result<T>` from `Nihdi.Core.Functional`:
-```csharp
-// Handler → Result<T>.Failure("msg") or Result<T>.Success(value)
-// Controller → if (!result.IsSuccess) return BadRequest(result.Error); return Ok();
-// Unexpected → _logger.LogError(ex, "{Handler} exception.", nameof(MyHandler)); throw;
-```
+This repo is a centralized library of AI coding assistant configurations. Users copy these files into new projects to get a well-configured GitHub Copilot and Claude Code setup out of the box.
 
-2. **DI via `*Module` + Scrutor suffix scanning only.** Never `services.AddScoped<T>()` in `Program.cs`.
-
-3. **`AsNoTracking()` on all read queries.** No N+1 patterns.
-
-4. **`EnableAuthentication: false` only in `appsettings.UnitTest.json`.**
-
-5. **Match existing patterns** in the same layer/feature before writing new code.
-
-6. **Analyzer rules** in `Directory.Build.props` are **fixed** — do not modify.
-</critical_rules>
+**What lives here:**
+- `copilot-instructions.md` — always-on instructions (Claude Code variant at root, VS Code variant in `.github/`)
+- `instructions/` — scoped instructions auto-loaded by file pattern (e.g. `tests.instructions.md` for test files)
+- `agents/` — on-demand agents (`@planner`, `@code-analysis`, `@git`, `@sonar-review`)
+- `skills/` — on-demand skills (`/build-feature`, `/add-endpoint`, `/add-blazor-page`, etc.)
+- `prompts/` — reusable prompt templates
+- `templates/` — spec templates and other reusable markdown
+- `AGENTS.md` — shared agent workflow rules (plan-first, red-green-refactor, human gates)
+- `CLAUDE.md` — Claude Code entrypoint
+- `COPILOT-GUIDE.md` — developer guide explaining how to use the customizations
 
 ---
 
-## Verification Commands
-
-After every code change, run all three:
-```
-dotnet build src/{{SolutionName}}.sln
-{{TestExePath}}
-dotnet format src/{{SolutionName}}.sln --verify-no-changes
-```
-`dotnet test` is not supported — use the `.exe` directly (`Microsoft.Testing.Platform` + .NET 10 SDK).
-
----
-
-## Scope & Boundaries
-
-<scope>
-
-- **Changes under `src/` only.** One issue per change.
-- **Features require `_plans/<FeatureName>.md` + user approval first.**
-- **Non-goals**: no new architectures/libraries · no deployment/CI changes · no auth flow changes · no ORM migrations (SQL in `Database/`) · no build-system changes.
-- **Risk areas** (require human review): Auth/OIDC · PII · shared contracts · domain/application layers · DB schema · controller routes/DTOs · blob/file storage.
-</scope>
-
----
-
-## Project Structure
+## Repo Structure
 
 ```
-src/
-├── Host/Web/            # Blazor Server (WFE)
-├── Host/BFF/            # Web API + NServiceBus + Hangfire
-├── Host/Api/            # Secondary Web API
-├── Host/Worker/         # Background worker
-├── Presentation/        # Razor Class Library (pages, ViewModels, Services)
-├── Core/Application/    # Commands, Queries, Handlers (CQRS-lite)
-├── Core/Domain/         # Entities, value objects (zero deps)
-├── Core/Infrastructure/ # Messaging, external services
-├── Core/Persistence/    # EF Core DbContext, repositories
-├── Contracts/           # Shared DTOs + NServiceBus contracts
-├── Database/            # SQL Server DACPAC
-└── Test/{Unit,Bff,Common,UI}/
+/
+├── .github/
+│   └── copilot-instructions.md   # This file (VS Code variant)
+├── copilot-instructions.md       # Claude Code variant (root)
+├── AGENTS.md                     # Agent workflow rules
+├── CLAUDE.md                     # Claude Code entrypoint
+├── COPILOT-GUIDE.md              # Developer best practice guide
+├── agents/                       # Agent definitions (.agent.md)
+├── instructions/                 # Scoped instructions (.instructions.md)
+├── skills/                       # Skill definitions (SKILL.md per folder)
+├── prompts/                      # Prompt templates (.prompt.md)
+└── templates/                    # Reusable templates (spec-template.md, etc.)
 ```
 
 ---
 
-## Naming Conventions
+## Rules for Editing Files in This Repo
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| Handler | `<Entity><Action>Handler` | `ProductCreateHandler` |
-| Command | `<Entity><Action>Command` | `ProductCreateCommand` |
-| Query | `I<Entity><Action>Query` / impl | `IProductGetAllQuery` |
-| Entity | `<Entity> : IEntity` | `Product` |
-| Repository | `I<Entity>Repository` / `<Entity>Repository : BaseRepository<T>` | `IProductRepository` |
-| DTO | `<Entity>Dto` (record) | `ProductDto` |
-| Controller | `<Entity>Controller` | `ProductController` |
-| ViewModel | `<Feature>ViewModel` | `ProductsViewModel` |
-| Test class | `<ClassUnderTest>Tests` | `ProductCreateHandlerTests` |
-| Test method | `<Method>_<Scenario>_<Expected>` | `Execute_EmptyName_ReturnsFailure` |
-| NServiceBus Event | `<Entity><PastTenseVerb>Event` (record) | `ProductCreatedEvent` |
-| NServiceBus Message | `<Entity>Message` (class) | `ProductMessage` |
-
-> **Note**: The examples above use `Product` as a placeholder. Replace with your project's **reference feature** entity.
-
-`_camelCase` fields (SA1309 disabled) · `kebab-case` routes · features in `Functionalities/<Feature>/`.
+1. **Preserve `{{Placeholder}}` tokens.** These are replaced per-project. Never hardcode project-specific values.
+2. **Keep files self-contained.** Each instruction/agent/skill file should work independently when copied into a target project.
+3. **Match the existing style.** Read similar files before creating or editing — mirror their structure, tone, and XML tag usage.
+4. **Optimize for Claude Sonnet 4.6.** Use XML tags for critical sections, markdown headers for structure, concise language, one example per pattern. Avoid `CRITICAL` / `MUST` / emoji emphasis — Sonnet follows normal instructions well.
+5. **Two variants of `copilot-instructions.md` exist.** The root version targets Claude Code; the `.github/` version targets VS Code. Keep them aligned in content but adapted to their respective tools.
+6. **No code files.** This repo contains only markdown. Do not add `.cs`, `.json`, `.csproj`, or other source files.
+7. **Agents must follow the workflow in `AGENTS.md`.** Plan-first, red-green-refactor, human gates.
 
 ---
 
-## DI Registration (Scrutor Suffix Scanning)
+## Placeholder Tokens
 
-| Suffix | Module | Lifetime |
-|--------|--------|----------|
-| `Query`, `Handler`, `ICommandHandler<,>` | `ApplicationModule` | Scoped |
-| `Repository` | `PersistenceModule` | Scoped |
-| `Service`, `Handler` | `InfrastructureModule` | Scoped |
-| `ViewModel`, `ServiceClient` | `PresentationModule` | Transient |
+These tokens appear throughout the files and are replaced when copied into a target project:
 
-Every service needs an `I<Name>` interface for Scrutor to register it.
-
----
-
-## Dependency Matrix
-
-| Project | May reference |
-|---------|--------------|
-| `Core.Domain` | _(nothing)_ |
-| `Core.Application` | `Core.Domain`, `Contracts` |
-| `Core.Infrastructure` | `Core.Application`, `Core.Domain` |
-| `Core.Persistence` | `Core.Application`, `Core.Domain` |
-| `Contracts` | _(nothing)_ |
-| `Presentation` | `Contracts`, `Core.Application` (interfaces only) |
-| `Host.Bff` | `Core.*`, `Contracts`, `Presentation` |
-| `Host.Wfe` | `Presentation`, `Contracts` |
-| `Test.Unit` | `Core.*`, `Contracts` |
-| `Test.Bff` | `Host.Bff` (Reqnroll + WebApplicationFactory) |
-| `Test.UI` | `Presentation` (bUnit component tests) |
-| `Test.Common` | _(shared test utilities, no prod refs)_ |
-
-**Forbidden**: Domain → anything · Application → Infra/Persistence/Host · Contracts → Core/Host · circular refs.
-EF Core only in `Core.Persistence`. Domain entities: plain C#.
+| Token | Purpose | Example value |
+|-------|---------|---------------|
+| `{{SolutionName}}` | Solution/project name | `MyApp` |
+| `{{NamespaceRoot}}` | Root namespace | `MyCompany.MyApp` |
+| `{{DbContextName}}` | EF Core DbContext class | `MyAppDbContext` |
+| `{{TestExePath}}` | Path to test executable (Microsoft.Testing.Platform) | `src/Test/Unit/bin/Debug/net10.0/MyApp.Test.Unit.exe` |
 
 ---
 
-## Test Conventions
+## File Type Conventions
 
-- AAA (Arrange/Act/Assert), MSTest v4, `[TestClass]` / `[TestMethod]`.
-- Mock at boundary (interfaces only, Moq). No real DB/HTTP in unit tests.
-- BFF integration (`Test.Bff`): Reqnroll (SpecFlow) `.feature` files + step definitions + `CustomWebApplicationFactory<Program, {{DbContextName}}>` + SQLite in-memory + `TestAuthenticationHandler`.
-- UI component (`Test.UI`): bUnit `BunitTest` base class, MSTest, renders Blazor components in isolation.
-
----
-
-## Core Patterns
-
-### Error Handling — `Result<T>`
-
-```csharp
-// Handler (replace <Entity> with your reference feature entity)
-public async Task<Result<<Entity>Dto>> Execute(<Entity>CreateCommand cmd, CancellationToken ct)
-{
-    try
-    {
-        if (string.IsNullOrWhiteSpace(cmd.Name))
-            return Result<<Entity>Dto>.Failure("Name is required");
-        var entity = new <Entity> { Name = cmd.Name };
-        await _repository.AddAsync(entity, ct);
-        return Result<<Entity>Dto>.Success(new <Entity>Dto(entity.Id, entity.Name));
-    }
-    catch (Exception ex) { _logger.LogError(ex, "{Handler} exception.", nameof(<Entity>CreateHandler)); throw; }
-}
-
-// Controller
-var result = await _handler.Execute(cmd, ct);
-if (!result.IsSuccess) return BadRequest(result.Error);
-return Ok(result.Value);
-```
-
-### Auth & User Context
-
-- WFE → OIDC (`AddOpenIdConnectForNihdi`); BFF/Api → JWT (`AddOAuthForNihdi`).
-- WFE → BFF with client-credentials.
-- `UserContextHeaderHandler` sends `Nihdi-User-Id`/`Nihdi-User-Name`; BFF reads via `HttpUserContextAccessor`.
+| Type | Location | Naming | Purpose |
+|------|----------|--------|---------|
+| Instructions | `instructions/` | `<topic>.instructions.md` | Auto-loaded by `applyTo` glob pattern |
+| Agents | `agents/` | `<name>.agent.md` | Invoked via `@name` in chat |
+| Skills | `skills/<name>/` | `SKILL.md` | Invoked via `/name` in chat |
+| Prompts | `prompts/` | `<name>.prompt.md` | Selected from prompt picker |
+| Templates | `templates/` | `<name>.md` | Referenced by agents/skills |
