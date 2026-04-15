@@ -1,16 +1,33 @@
-# From Vibe Coding to Spec-Driven Development: Best Practices for AI-Assisted Coding with GitHub Copilot
+# From Vibe Coding to Spec-Driven Development: A Reusable AI Agent Configuration for .NET Projects
 
-*How to standardise AI coding guidance across teams — and how you can do the same.*
+*An open-source library of GitHub Copilot and Claude Code configuration files that encode a disciplined, repeatable engineering process into AI agents, skills, and instructions.*
 
-> **Part 1 of 2.** This article covers best practices and the copilot-sync template system. For a hands-on walkthrough of the spec-driven process, see [Part 2: The Process in Action](BLOGPOST-PROCESS.md).
+> **Repository:** [github.com/geobarteam/github-copilot-configs](https://github.com/geobarteam/github-copilot-configs)
+>
+> **Part 1 of 2.** This article covers the motivation, best practices, and the configuration library. For a hands-on walkthrough of the spec-driven process, see [Part 2: The Process in Action](BLOGPOST-PROCESS.md).
 
 ---
 
-## Introduction
+## Why I Built This
 
-AI coding assistants like GitHub Copilot are changing how developers write software. But without clear practices, teams drift into what we call **vibe coding** — letting the AI generate code with no plan, no verification, and no accountability. The result? Code nobody fully understands.
+Over the past year I've spent hundreds of hours working with AI coding agents — GitHub Copilot, Claude Code, and various MCP tool integrations. I learned a lot, made plenty of mistakes, and eventually landed on a workflow that works reliably.
 
-This article distils best practices for using GitHub Copilot effectively, and explains how to build a centralised template system — **copilot-sync** — to propagate these practices across every project in an organisation.
+The problem was: every time I started a new project, I was rebuilding the same configuration from scratch. The same planning discipline. The same Red-Green-Refactor loop. The same human gates. The same layer-specific coding conventions. Each project had slight variations, and none of them captured everything I'd learned.
+
+So I built **[github-copilot-configs](https://github.com/geobarteam/github-copilot-configs)** — a reusable template library of AI agent configuration files that I copy into every new .NET project. It encodes the engineering process I've developed over my career — now translated into agents, skills, and instruction files that AI assistants follow automatically.
+
+The goal is twofold:
+
+1. **Quick project setup** — Copy the files, run the `/init` skill, and every AI assistant in the project immediately knows the architecture, conventions, test commands, and development workflow. No more explaining the same things in every chat session.
+2. **Consistent engineering process** — The agents enforce plan-first development, test-first implementation, vertical slicing, and mandatory human review gates. This isn't just guidance — it's a process that prevents the most common AI coding failures I've encountered.
+
+This article shares what I've learned and how the configuration library works. Whether you adopt it wholesale or just borrow ideas, I hope it saves you some of the trial and error I went through.
+
+---
+
+## The Problem: Vibe Coding
+
+AI coding assistants like GitHub Copilot are changing how developers write software. But without clear practices, teams drift into what I call **vibe coding** — letting the AI generate code with no plan, no verification, and no accountability. The result? Code nobody fully understands.
 
 ---
 
@@ -28,7 +45,7 @@ Before diving into workflows, every developer should understand three foundation
 
 ### Treat Tokens as a Limited Resource
 
-All developers in our organisation receive an institution-managed GitHub Copilot Pro subscription. But tokens — the unit of model consumption — are finite. Practical consequences:
+Tokens — the unit of model consumption — are finite on any plan. Practical consequences:
 
 - Use **short, focused sessions**
 - Keep prompts **specific and bounded**
@@ -39,7 +56,7 @@ All developers in our organisation receive an institution-managed GitHub Copilot
 
 ### Choose the Right Model for the Job
 
-Not every task needs the most powerful model. Here's how we think about model selection:
+Not every task needs the most powerful model. Here's how I think about model selection:
 
 | Model | Best for | Relative cost |
 |-------|----------|---------------|
@@ -60,7 +77,7 @@ The main danger of AI-assisted coding isn't wrong code — it's **no longer know
 | Long unstructured sessions | Short iterations with build/test/review gates |
 | AI decides design and validation | You stay accountable for design, code, and validation |
 
-The antidote is **spec-driven development**: start with a specification, produce a plan, implement in small verified steps, and stay in control throughout.
+The antidote is **spec-driven development**: start with a specification, produce a plan, implement in small verified steps, and stay in control throughout. That's what this configuration library encodes.
 
 ### Keep Sessions Short
 
@@ -81,7 +98,7 @@ What counts as verification:
 
 Without verification, the AI produces plausible but potentially wrong code, and you become the only feedback loop — a feedback loop that gets tired and loses attention.
 
-In our workflow, every change follows: **RED → GREEN → REFACTOR → ANALYSIS → PROOF → HUMAN GATE**.
+In my workflow, every change follows: **RED → GREEN → REFACTOR → ANALYSIS → PROOF → HUMAN GATE**.
 
 ### Anthropic Principle #2: Explore → Specify → Plan → Implement → Commit
 
@@ -109,86 +126,95 @@ The pattern is always the same: scope the task, reference existing patterns, and
 
 ---
 
-## Part 2: Scaling Best Practices with Centralised AI Templates
+## Part 2: The Configuration Library — What's Inside
 
-Knowing best practices is one thing. Making sure every project in the organisation follows them is another. We solved this with **copilot-sync** — a tool that centrally authors and distributes GitHub Copilot customisation files across all team projects.
+Knowing best practices is one thing. Making every AI session follow them automatically is another. That's what the [github-copilot-configs](https://github.com/geobarteam/github-copilot-configs) library does — it encodes your architecture, conventions, and development process into configuration files that GitHub Copilot and Claude Code follow without you repeating yourself every session.
 
-### The Problem
+**Target stack**: ASP.NET Core + Blazor WebAssembly · Onion/Screaming Architecture · CQRS-lite · .NET 10. But the patterns and workflow are adaptable to any .NET project.
 
-GitHub Copilot's behaviour is shaped by files in the `.github/` directory: `copilot-instructions.md`, agent definitions, skills, instruction files, and prompts. These files encode coding standards, architectural patterns, verification commands, and domain knowledge.
+### Agents — Specialized AI Roles
 
-Without centralisation, each team maintains its own copy. Problems quickly emerge:
-- **Drift** — Teams diverge from shared standards
-- **Duplication** — The same patterns are written and maintained independently in every repo
-- **Stale guidance** — Improvements in one project never reach the others
-- **Onboarding friction** — New projects start with no AI guidance at all
+Agents are invoked via `@name` in VS Code chat. Each is a specialized role with its own constraints, workflow, and tools.
 
-### The Solution: A Template Package + CLI Tool
+| Agent | What it does |
+|-------|-------------|
+| **`@planner`** | Reads `_specs/<Feature>.md` (if it exists) and creates `_plans/<Feature>.md` with vertical-slice steps before any code is written. Interviews you about the feature, reads the reference pattern, decomposes into testable behavior slices. Never writes production code — planning only. |
+| **`@bugfix`** | Diagnoses bugs using regression-test-first discipline. Writes a test that reproduces the bug, confirms it fails, then writes the minimal fix. Escalates to `@planner` if the fix spans 3+ files. |
+| **`@debug`** | A debug engineer that combines Application Insights log analysis with Playwright browser automation. Queries Azure telemetry for exceptions and traces, reproduces UI issues in a real browser, correlates frontend errors with backend traces, and produces structured debug reports. |
+| **`@devops`** | Maintains GitHub Actions CI/CD pipelines and Azure Bicep infrastructure. Knows the exact workflow structure (build → deploy → summary), Bicep module conventions, resource naming patterns, and the Architecture.md/Deployment-Info pattern for tracking infrastructure state. |
+| **`@smoke-test`** | Post-deployment smoke testing using browser automation. Discovers environment URLs from infrastructure docs, navigates to health endpoints and pages, checks for console errors and network failures, and produces a structured pass/fail report. |
+| **`@git`** | GitFlow branching specialist. Creates feature/bugfix/hotfix branches, manages tags, guides PR workflows. Only runs mutating Git commands after explicit confirmation. |
 
-Copilot-sync is a dual-package .NET solution:
+Each agent follows the shared workflow rules in `AGENTS.md`: plan-first discipline, Red-Green-Refactor loops, and mandatory human gates.
 
-| Package | Role |
-|---------|------|
-| **Copilot.Customizations** | NuGet content package — embeds tokenised `.github/` template files as assembly resources |
-| **copilot-sync** | `dotnet tool` CLI — reads project config, replaces tokens, syncs files to the target repo |
+#### The DevOps Agent in Detail
 
-The core idea: **author templates once, distribute everywhere, customise per project via tokens**.
+The `@devops` agent deserves special attention because it encodes a pattern I found particularly valuable: the **Architecture.md → Bicep → Deployment-Info pipeline**.
 
-### How Templates Are Organised
+The workflow separates *what should exist* (Architecture.md) from *what does exist* (Deployment-Info-{env}.md):
 
-Templates follow a **hierarchical composition model** with shared and template-specific layers:
+1. **Architecture.md** is the specification — the desired infrastructure state, including resource topology, SKUs, cost estimates, DNS records, and URL maps
+2. **Bicep templates** implement that specification
+3. **Deployment-Info-stg.md / Deployment-Info-prd.md** record the actual deployed state — real resource names, FQDNs, and live URLs
 
-```
-templates/
-├── manifest.json                  # Template registry
-├── shared/                        # Files common to ALL templates
-│   ├── agents/                    # Agent definitions
-│   ├── instructions/              # Domain-specific coding instructions
-│   ├── skills/                    # Reusable skill definitions
-│   ├── prompts/                   # Prompt templates
-│   └── AGENTS.md                  # Agent workflow rules
-├── BlazorServer-3Tier/            # Blazor Server + BFF specifics
-│   ├── copilot-instructions.md
-│   ├── COPILOT-GUIDE.md
-│   ├── CLAUDE.md
-│   └── manifest.json
-├── BlazorWasm-3Tier/              # Blazor WASM + API specifics
-└── Library/                       # .NET library template
-```
+This separation means the devops agent always knows the current state of each environment and can reason about what needs to change. It also means the `@smoke-test` and `@debug` agents can discover live URLs automatically — no hardcoded values.
 
-**Shared files** provide common guidance — persistence layer conventions, test structure, domain entity rules, and reusable skills like PDF/Excel generation or feature scaffolding.
+#### The Smoke Test Agent in Detail
 
-**Template-specific files** override shared files when architecture differs. A Blazor Server project needs different instructions than a class library.
+The `@smoke-test` agent is designed for post-deployment verification. Instead of relying on hardcoded URLs, it dynamically builds its environment URL table by reading the infrastructure documentation files. It then executes a structured test plan:
 
-The manifest in each folder maps source files to output paths, supporting **dual-write** — a single template file can be written to both `.github/` and `src/.github/` for tooling compatibility:
+- **Health endpoints**: Checks `/health`, `/health/ready`, `/health/live` on every API
+- **Page loads**: Navigates to each web application, verifies content renders
+- **Console errors**: Captures JavaScript errors and failed resource loads
+- **Network errors**: Monitors for 4xx/5xx HTTP responses
+- **Authentication flows**: Verifies login redirects appear on protected routes (without entering real credentials)
 
-```json
-{
-  "copilot-instructions.md": [
-    ".github/copilot-instructions.md",
-    "src/.github/copilot-instructions.md"
-  ]
-}
-```
+The agent produces a structured report with pass/fail counts, collected errors, and details on every failure. It's read-only by design — it never submits forms or modifies data, especially in production.
 
-### What Gets Distributed
+### Skills — Step-by-Step Recipes
 
-The template system distributes a complete AI coding environment:
+Skills are invoked via `/name` in chat and guide the AI through multi-step code generation tasks.
 
-| Artefact | Purpose |
-|----------|---------|
-| `copilot-instructions.md` | Core coding standards, critical rules, verification commands |
-| `COPILOT-GUIDE.md` | Architecture-specific guidance (layer structure, patterns, conventions) |
-| `CLAUDE.md` | Claude Code / Opus-specific instructions |
-| `AGENTS.md` | Workflow rules: planning gates, Red-Green-Refactor loops, human gates |
-| Agent definitions (`.agent.md`) | Multi-turn workflow orchestrators (e.g., planner agent) |
-| Instructions (`.instructions.md`) | Domain-specific rules (BFF controllers, persistence) |
-| Skills (`SKILL.md`) | Reusable code generation tasks (add endpoint, build feature, generate reports) |
-| Prompts (`.prompt.md`) | Reusable query templates |
+| Skill | Purpose |
+|-------|---------|
+| **`/init`** | **Start here** — discovers project tokens (`{{SolutionName}}`, `{{TestExePath}}`, etc.) and replaces placeholders across all config files |
+| **`/build-feature`** | Implements an approved plan step by step using Red-Green-Refactor |
+| **`/add-endpoint`** | Adds a vertical-slice API endpoint (domain → application → controller → tests) |
+| **`/add-blazor-page`** | Adds a Blazor page with ViewModel, Refit client, and MudBlazor components |
+| **`/add-blazor-module`** | Scaffolds a standalone WASM module with MVVM + HttpClient |
+| **`/add-dbup`** | Creates a DbUp migration script (CREATE TABLE, ALTER, seed data) |
+| **`/e2e-test`** | Full-stack browser testing with Playwright MCP |
+| **`/csharp-coding-standards`** | Reference-only C# coding standards and patterns |
+Specs and plans are created as project-level documentation at the repo root:
+- **`_specs/<Feature>.md`** — Feature specifications (the contract between developer and AI). Written before planning using `templates/spec-template.md`.
+- **`_plans/<Feature>.md`** — Implementation plans with vertical-slice steps, created by `@planner` from the spec.
+### Instructions — Auto-Activated Layer Conventions
 
-### Token Replacement: Project-Specific Customisation
+Instruction files activate automatically when you edit files matching their `applyTo` glob pattern. When you open a domain entity file, the AI silently loads domain conventions. When you edit a controller, it loads BFF patterns.
 
-Templates use `{{MustacheStyle}}` placeholders that get replaced with project-specific values at sync time:
+| Instruction | Activates for |
+|-------------|---------------|
+| `domain-entity` | `src/Core/Domain/**` |
+| `application-layer` | `src/Core/Application/**` |
+| `persistence-layer` | `src/Core/Persistence/**` |
+| `bff-controller` | `src/Host/Client/**` |
+| `blazor-presentation` | `src/Presentation/**` |
+| `refit-client` | `src/Presentation/**/ServiceClients/**` |
+| `tests` | `src/Test/**` |
+
+This means the AI always knows the conventions for the layer you're working in — without you needing to mention them.
+
+### Root Files — The Process Backbone
+
+| File | Purpose |
+|------|---------|
+| **`AGENTS.md`** | Shared workflow rules — planning gates, Red-Green-Refactor-Proof loop, human gates, vertical slice decomposition rules |
+| **`copilot-instructions.md`** | Project-level Copilot instructions — critical rules, project structure, dependency matrix, naming conventions, verification commands |
+| **`CLAUDE.md`** | Claude Code entrypoint — references AGENTS.md, adds Claude-specific rules |
+
+### Token System — Project-Specific Customization
+
+Templates use `{{MustacheStyle}}` placeholders that the `/init` skill replaces with project-specific values:
 
 | Token | Example |
 |-------|---------|
@@ -197,166 +223,72 @@ Templates use `{{MustacheStyle}}` placeholders that get replaced with project-sp
 | `{{DbContextName}}` | `FindMyDoctorDbContext` |
 | `{{TestExePath}}` | `.\src\Test\Unit\bin\Debug\net10.0\Contoso.FindMyDoctor.Unit.Tests.exe` |
 
-**Derived tokens** are computed automatically — solution file names, project file paths, and other values that follow naming conventions.
-
-A template file containing:
-
-```markdown
-# Copilot Instructions — {{SolutionName}}
-Run tests: {{TestExePath}}
-Namespace: {{NamespaceRoot}}
-```
-
-Becomes, after sync:
-
-```markdown
-# Copilot Instructions — FindMyDoctor
-Run tests: .\src\Test\Unit\bin\Debug\net10.0\Contoso.FindMyDoctor.Unit.Tests.exe
-Namespace: Contoso.FindMyDoctor
-```
-
-### The CLI Workflow
-
-#### Initialise a New Project
-
-```bash
-copilot-sync init --template BlazorServer-3Tier
-```
-
-The tool interactively prompts for token values, creates `.copilotrc.json`, and syncs all template files with token replacement. A new project gets a complete, organisation-standard AI coding environment in seconds.
-
-#### Update to Latest Templates
-
-```bash
-copilot-sync update
-```
-
-When the central templates improve — new skills, better instructions, updated patterns — every project pulls the latest version. The update command detects local modifications and handles them safely.
-
-#### CI Version Check
-
-```bash
-copilot-sync check
-```
-
-Returns exit code 1 if templates are outdated, making it easy to enforce currency in CI pipelines.
-
-### Conflict Detection: Respecting Local Changes
-
-The sync tool uses **SHA-256 hash-based conflict detection**. After each sync, file hashes are stored in `.copilot-sync/hashes.json`. On the next update:
-
-1. The current file's hash is compared against the stored hash
-2. If they differ, the file was locally modified → **conflict**
-3. The incoming template version is saved as `.copilot-sync/conflicts/<file>.incoming`
-4. The local file is preserved untouched
-5. The developer merges manually
-
-This means teams can safely customise their AI guidance without fear of losing changes on the next update. The `--force` flag overrides conflicts when needed, and the `overrides` array in config permanently exempts files from sync.
-
-### The Config File
-
-Each consumer project commits a single `.copilotrc.json`:
-
-```json
-{
-  "version": "1.0.0",
-  "packageVersion": "1.0.5",
-  "template": "BlazorServer-3Tier",
-  "tokens": {
-    "SolutionName": "FindMyDoctor",
-    "NamespaceRoot": "Contoso.FindMyDoctor",
-    "DbContextName": "FindMyDoctorDbContext"
-  },
-  "overrides": [
-    ".github/skills/proprietary-skill/SKILL.md"
-  ],
-  "lastSyncedAt": "2026-03-15T14:23:42Z"
-}
-```
-
-This is the only file teams need to maintain. Everything else is generated.
-
-### The Override Mechanism
-
-Sometimes a project needs AI guidance that diverges from the template — a domain-specific skill, a custom instruction file, or a modified workflow. The `overrides` array permanently skips listed files during updates:
-
-```json
-{
-  "overrides": [
-    ".github/instructions/custom-domain.md",
-    ".github/skills/proprietary-skill/SKILL.md"
-  ]
-}
-```
-
-This gives teams the flexibility to extend while still receiving updates for everything else.
+Copy the files, run `/init`, and the entire AI configuration is project-specific in seconds.
 
 ---
 
-## Part 3: Setting Up Your Own Centralised AI Template System
+## Part 3: Getting Started — Setting Up Your Own Project
 
-You don't need to use our exact tooling. The pattern is what matters. Here's how to build your own:
+You don't need to use the exact same stack. The engineering process — plan first, test first, one step at a time — works for any project. Here's how to get started:
 
-### Step 1: Audit Your AI Artefacts
+### Step 1: Copy the Configuration Files
 
-Start by collecting what your best teams are already doing:
-- What's in their `copilot-instructions.md`?
-- What coding standards do they encode?
-- What verification commands do they require?
-- What architectural patterns are documented?
-- What skills or prompts have they created?
+Clone or download [github-copilot-configs](https://github.com/geobarteam/github-copilot-configs) and copy the relevant files into your project:
 
-### Step 2: Create a Shared Template Repository
-
-Organise your findings into a template structure:
-- **Shared layer**: coding standards, test conventions, common patterns — things every project needs
-- **Template-specific layers**: architecture-specific guidance (microservices vs monolith, React vs Blazor, etc.)
-- **Token placeholders**: anything project-specific (names, paths, URLs) becomes a `{{Token}}`
-
-### Step 3: Build a Distribution Mechanism
-
-Options range from simple to sophisticated:
-
-| Approach | Complexity | Trade-offs |
-|----------|-----------|------------|
-| Git submodule | Low | Manual updates, no token replacement |
-| Script that copies + sed | Low | Fragile, no conflict detection |
-| NuGet/npm package + CLI tool | Medium | Versioned, automated, conflict-safe |
-| Template repository + GitHub Actions | Medium | GitHub-native, but limited customisation |
-
-We chose the NuGet package approach because it gives us versioning, conflict detection, and CI enforcement — all critical for a large organisation.
-
-### Step 4: Encode Your Workflow
-
-The most valuable thing to centralise isn't boilerplate — it's **workflow**. Encode your development process into agent definitions and instruction files:
-
-- Red-Green-Refactor loops with mandatory verification
-- Planning gates before implementation
-- Human review checkpoints
-- Build and analysis commands that must pass
-
-When the AI follows these workflows, it produces code that meets your standards by default.
-
-### Step 5: Create a Feedback Loop
-
-The real power of centralisation is the **feedback loop**:
-
-1. A developer discovers a better pattern or a new skill
-2. They contribute it back to the central template
-3. Every project in the organisation benefits on the next sync
-
-This turns individual learning into **organisational learning**. AI guidance improves continuously, driven by real experience across all teams.
-
-### Step 6: Enforce in CI
-
-Add a check to your CI pipeline that fails when templates are outdated:
-
-```yaml
-- script: copilot-sync check
-  displayName: 'Verify AI templates are current'
+```
+your-project/
+├── .github/
+│   └── copilot-instructions.md
+├── AGENTS.md
+├── CLAUDE.md                      ← optional, for Claude Code users
+├── agents/
+├── instructions/
+├── skills/
+├── prompts/
+└── templates/
 ```
 
-This ensures teams don't silently fall behind as practices evolve.
+### Step 2: Run the Init Skill
+
+Open VS Code chat and type `/init`. The skill will:
+
+1. **Discover** your project's tokens automatically (solution name, namespace root, test executable path, etc.)
+2. **Ask** for values that can't be auto-discovered
+3. **Replace** all `{{token}}` placeholders across your config files
+4. **Verify** no unreplaced tokens remain
+
+### Step 3: Start Building Features
+
+```
+# 1. Plan the feature
+@planner Add subscription management with list and create
+
+# 2. Review and approve the plan
+
+# 3. Implement step by step
+/build-feature Step 1 — Display subscription list
+```
+
+### Step 4: Adapt to Your Architecture
+
+These files are templates. After running `/init`, adapt them to your project:
+
+- **Different architecture?** Edit the project structure in `copilot-instructions.md` and update `applyTo` globs in instruction files
+- **Different test runner?** Update `{{TestExePath}}` references
+- **Additional layers?** Create new `<topic>.instructions.md` files with an `applyTo` glob
+- **Additional agents?** Create `<name>.agent.md` in `agents/` following the existing pattern
+- **Different CI/CD?** Update the `@devops` agent with your pipeline conventions
+
+### Step 5: Build Your Own Agent Library
+
+The most valuable thing in this repo isn't the boilerplate — it's the **workflow encoded in agents**. Consider building agents for your own recurring tasks:
+
+- A **code review agent** that checks PRs against your team's conventions
+- A **migration agent** that handles framework or library upgrades
+- A **documentation agent** that keeps API docs in sync with implementation
+- A **performance agent** that profiles and suggests optimizations
+
+The pattern is always the same: define the agent's role, constraints, workflow steps, and tools — then let it execute within guardrails you control.
 
 ---
 
@@ -384,7 +316,7 @@ Explore → Specify → Plan → Implement → Commit
 
 ### The Planning Gate: When Plans Are Required
 
-Not every change needs a plan. Our templates encode a simple decision matrix:
+Not every change needs a plan. The configuration library encodes a simple decision matrix:
 
 | Situation | Plan required? |
 |-----------|---------------|
@@ -516,9 +448,12 @@ The key insight is that this entire process — planning gates, vertical slicing
 |------|----------------|
 | `AGENTS.md` | Planning gate, mandatory workflow rules, RGR-Proof loop, human gates, vertical slice rules |
 | `planner.agent.md` | How to decompose features into vertical slices, interview checklist, self-check validation |
+| `devops.agent.md` | CI/CD pipeline structure, Bicep conventions, Architecture.md → Deployment-Info pipeline |
+| `smoke-test.agent.md` | Post-deployment verification, URL discovery, browser-based health checks |
+| `debug.agent.md` | App Insights telemetry analysis, Playwright reproduction, cross-layer correlation |
+| `bugfix.agent.md` | Regression-test-first bug fixing, 2-file scope limit, escalation rules |
 | `build-feature/SKILL.md` | How to execute plan steps with layer-specific code templates |
 | `copilot-instructions.md` | Critical rules, project structure, dependency matrix, naming conventions |
-| `plan-template.md` | Exact format for plan files with stub/wire guidance |
 
 When a developer says "build the Subscriptions feature", the AI reads these files, asks clarifying questions, produces a vertically-sliced plan, waits for approval, and executes one step at a time with test-first discipline and mandatory human gates. The developer's job shifts from writing boilerplate to **reviewing vertical slices of working behaviour**.
 
@@ -526,18 +461,20 @@ When a developer says "build the Subscriptions feature", the AI reads these file
 
 ## Conclusion
 
-AI coding assistants are powerful, but they amplify both good and bad practices. The organisations that benefit most will be those that:
+AI coding assistants are powerful, but they amplify both good and bad practices. The developers who benefit most will be those who:
 
 1. **Adopt deliberate workflows** — Explore, Specify, Plan, Implement, Commit
 2. **Require verification** — never trust AI output without automated proof
 3. **Keep sessions focused** — one task, one goal, clear validation
 4. **Choose models wisely** — match cost to complexity
-5. **Centralise and share AI guidance** — turn individual insights into organisational standards
+5. **Encode their process into AI configuration** — turn personal engineering discipline into agents that enforce it automatically
 
-The tooling doesn't have to be complex. What matters is the commitment to treating AI coding artefacts — instructions, skills, agents, prompts — as **first-class engineering assets** that deserve the same rigour as your application code: versioned, tested, reviewed, and continuously improved.
+I built [github-copilot-configs](https://github.com/geobarteam/github-copilot-configs) because I got tired of re-explaining my process to every AI session in every project. Now I copy the files, run `/init`, and every agent — planner, bugfix, debug, devops, smoke-test, git — knows the architecture, the conventions, and the workflow. The AI becomes a disciplined teammate instead of an unpredictable code generator.
+
+The configuration library is open source and designed to be forked and adapted. Take what works for you, modify what doesn't, and build your own agent library on top of it. The investment in encoding your engineering process pays for itself on the first feature you build with it.
 
 ---
 
-*This article describes practices encoded in the [copilot-sync](https://github.com/nickaerts/copilot-sync) open-source project, which distributes AI coding instructions as versioned templates across .NET projects.*
+*The practices described in this article are encoded in the [github-copilot-configs](https://github.com/geobarteam/github-copilot-configs) open-source repository — a reusable template library of GitHub Copilot and Claude Code configuration files for .NET projects.*
 
 > **Next:** [Part 2 — Spec-Driven Development: The Process in Action](BLOGPOST-PROCESS.md)

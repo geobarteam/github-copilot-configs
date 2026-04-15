@@ -56,13 +56,13 @@ Layer-specific conventions that **auto-activate** when you edit files matching t
 
 | Prompt | Purpose |
 |--------|---------|
-| `new-feature` | Kicks off a new vertical-slice feature: identifies reference feature → creates plan → awaits approval |
+| `new-feature` | Kicks off a new vertical-slice feature: writes spec (`_specs/`) → identifies reference feature → creates plan (`_plans/`) → awaits approval |
 
 ### Templates (`templates/`)
 
 | Template | Purpose |
 |----------|---------|
-| `spec-template.md` | Feature specification format used by `@planner` |
+| `spec-template.md` | Feature specification format — user stories, acceptance criteria, data model, business rules. Used to create `_specs/<Feature>.md` |
 
 ### Root Files
 
@@ -122,12 +122,15 @@ The init skill will:
 ### 3. Start building features
 
 ```
-# 1. Plan the feature (creates _plans/Subscriptions.md)
+# 1. Write the spec (creates _specs/Subscriptions.md)
+#    Use templates/spec-template.md as the format
+
+# 2. Plan the feature (creates _plans/Subscriptions.md)
 @planner Add subscription management with list and create
 
-# 2. Review and approve the plan
+# 3. Review and approve the plan
 
-# 3. Implement step by step
+# 4. Implement step by step
 /build-feature Step 1 — Display subscription list
 ```
 
@@ -137,9 +140,13 @@ The init skill will:
 
 This library enforces a **spec-driven development process** built on three principles:
 
-### Plan First
+### Specify First
 
-Every feature starts with a plan (`_plans/<Feature>.md`). The plan decomposes the feature into **vertical behavior slices** — not horizontal layers. Each slice delivers observable, testable functionality across all necessary layers.
+Every feature starts with a specification (`_specs/<Feature>.md`). The spec captures user stories, acceptance criteria, data model, business rules, and non-goals. It is the contract between developer intent and AI execution — without it, the AI guesses what you want. The `templates/spec-template.md` provides the format.
+
+### Plan Before Code
+
+Once the spec is approved, the `@planner` agent produces a plan (`_plans/<Feature>.md`). The plan decomposes the feature into **vertical behavior slices** — not horizontal layers. Each slice delivers observable, testable functionality across all necessary layers. Every plan step traces back to an acceptance criterion in the spec.
 
 ### Red-Green-Refactor
 
