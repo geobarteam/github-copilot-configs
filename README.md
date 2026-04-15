@@ -68,9 +68,10 @@ Layer-specific conventions that **auto-activate** when you edit files matching t
 
 | File | Purpose |
 |------|---------|
-| `copilot-instructions.md` | Project-level Copilot instructions (copied to target project root) |
-| `AGENTS.md` | Shared agent workflow rules — plan-first, Red-Green-Refactor, human gates |
-| `CLAUDE.md` | Claude Code entrypoint (references `AGENTS.md`) |
+| `copilot-instructions.md` | Project-level Copilot instructions — copy to `.github/copilot-instructions.md` in target projects |
+| `.github/copilot-instructions.md` | **Meta** — instructions for *this* template repo only (do not copy) |
+| `AGENTS.md` | Shared agent workflow rules — stays at workspace root (always-on) |
+| `CLAUDE.md` | Claude Code entrypoint (references `AGENTS.md`) — stays at workspace root |
 | `BLOGPOST.md` | Part 1: Spec-driven development best practices |
 | `BLOGPOST-PROCESS.md` | Part 2: The process in action |
 
@@ -85,15 +86,21 @@ Copy the following into your project repository:
 ```
 your-project/
 ├── .github/
-│   └── copilot-instructions.md   ← from this repo's copilot-instructions.md
-├── AGENTS.md
-├── CLAUDE.md                      ← optional, for Claude Code users
-├── agents/
-├── instructions/
-├── skills/
-├── prompts/
-└── templates/
+│   ├── copilot-instructions.md   ← from this repo's root copilot-instructions.md
+│   ├── instructions/             ← auto-activated by applyTo glob patterns
+│   ├── agents/                   ← invoked via @name in chat
+│   ├── skills/                   ← invoked via /name in chat
+│   └── prompts/                  ← available in VS Code prompt picker
+├── AGENTS.md                     ← shared agent workflow rules (always-on)
+├── CLAUDE.md                     ← optional, for Claude Code users (always-on)
+└── templates/                    ← referenced by agents and skills
 ```
+
+> **Note:** The `.github/copilot-instructions.md` in *this* repo is the meta-instruction file
+> for the template library itself — do not copy it. Instead, copy the root-level
+> `copilot-instructions.md` to your project's `.github/copilot-instructions.md`.
+> `AGENTS.md` and `CLAUDE.md` stay at the workspace root as always-on instructions
+> recognized by VS Code and Claude Code respectively.
 
 ### 2. Run the `/init` skill
 
@@ -189,22 +196,23 @@ src/
 
 These files are **templates**. After running `/init`, adapt them to your project:
 
-- **Different architecture?** Edit the project structure in `copilot-instructions.md` and update `applyTo` globs in instruction files.
-- **Different test runner?** Update `{{TestExePath}}` references in `AGENTS.md` and `copilot-instructions.md`.
-- **Additional layers?** Create new instruction files following the naming convention `<topic>.instructions.md` with an `applyTo` glob.
-- **Additional agents?** Create `<name>.agent.md` in `agents/` following the existing pattern.
+- **Different architecture?** Edit the project structure in `.github/copilot-instructions.md` and update `applyTo` globs in instruction files.
+- **Different test runner?** Update `{{TestExePath}}` references in `AGENTS.md` and `.github/copilot-instructions.md`.
+- **Additional layers?** Create new instruction files following the naming convention `<topic>.instructions.md` with an `applyTo` glob in `.github/instructions/`.
+- **Additional agents?** Create `<name>.agent.md` in `.github/agents/` following the existing pattern.
 
 ---
 
 ## File Type Conventions
 
-| Type | Location | Naming | Invocation |
-|------|----------|--------|------------|
-| Instructions | `instructions/` | `<topic>.instructions.md` | Auto-loaded by `applyTo` glob |
-| Agents | `agents/` | `<name>.agent.md` | `@name` in chat |
-| Skills | `skills/<name>/` | `SKILL.md` | `/name` in chat |
-| Prompts | `prompts/` | `<name>.prompt.md` | Prompt picker in VS Code |
-| Templates | `templates/` | `<name>.md` | Referenced by agents/skills |
+| Type | This repo | Target project | Naming | Invocation |
+|------|-----------|----------------|--------|------------|
+| Instructions | `instructions/` | `.github/instructions/` | `<topic>.instructions.md` | Auto-loaded by `applyTo` glob |
+| Agents | `agents/` | `.github/agents/` | `<name>.agent.md` | `@name` in chat |
+| Skills | `skills/<name>/` | `.github/skills/<name>/` | `SKILL.md` | `/name` in chat |
+| Prompts | `prompts/` | `.github/prompts/` | `<name>.prompt.md` | Prompt picker in VS Code |
+| Templates | `templates/` | `templates/` | `<name>.md` | Referenced by agents/skills |
+| Always-on | `AGENTS.md`, `CLAUDE.md` | workspace root | — | Auto-loaded by VS Code / Claude Code |
 
 ---
 

@@ -238,15 +238,18 @@ Clone or download [github-copilot-configs](https://github.com/geobarteam/github-
 ```
 your-project/
 ├── .github/
-│   └── copilot-instructions.md
-├── AGENTS.md
-├── CLAUDE.md                      ← optional, for Claude Code users
-├── agents/
-├── instructions/
-├── skills/
-├── prompts/
-└── templates/
+│   ├── copilot-instructions.md   ← from this repo's root copilot-instructions.md
+│   ├── instructions/             ← auto-activated by applyTo glob patterns
+│   ├── agents/                   ← invoked via @name in chat
+│   ├── skills/                   ← invoked via /name in chat
+│   └── prompts/                  ← available in prompt picker
+├── AGENTS.md                     ← shared agent workflow rules (always-on)
+├── CLAUDE.md                     ← optional, for Claude Code users
+└── templates/                    ← referenced by agents and skills
 ```
+
+> The `.github/copilot-instructions.md` in this repo is meta (for the template library itself).
+> Copy the **root-level** `copilot-instructions.md` to `.github/copilot-instructions.md` in your project.
 
 ### Step 2: Run the Init Skill
 
@@ -273,10 +276,10 @@ Open VS Code chat and type `/init`. The skill will:
 
 These files are templates. After running `/init`, adapt them to your project:
 
-- **Different architecture?** Edit the project structure in `copilot-instructions.md` and update `applyTo` globs in instruction files
+- **Different architecture?** Edit the project structure in `.github/copilot-instructions.md` and update `applyTo` globs in instruction files
 - **Different test runner?** Update `{{TestExePath}}` references
-- **Additional layers?** Create new `<topic>.instructions.md` files with an `applyTo` glob
-- **Additional agents?** Create `<name>.agent.md` in `agents/` following the existing pattern
+- **Additional layers?** Create new `<topic>.instructions.md` files with an `applyTo` glob in `.github/instructions/`
+- **Additional agents?** Create `<name>.agent.md` in `.github/agents/` following the existing pattern
 - **Different CI/CD?** Update the `@devops` agent with your pipeline conventions
 
 ### Step 5: Build Your Own Agent Library
