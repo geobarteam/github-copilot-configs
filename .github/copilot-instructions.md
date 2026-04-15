@@ -27,6 +27,7 @@ Target projects: ASP.NET + Blazor + Worker solutions using Onion/Screaming Archi
 │   ├── devops.agent.md           # Azure infra + GitHub Actions CI/CD
 │   ├── git.agent.md              # GitFlow branching + .gitignore
 │   ├── planner.agent.md          # Feature plan creator
+│   ├── smoke-test.agent.md      # Post-deployment smoke testing (Playwright)
 ├── instructions/
 │   ├── application-layer.instructions.md   # src/Core/Application/**
 │   ├── bff-controller.instructions.md      # src/Host/BFF/**
