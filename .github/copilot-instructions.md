@@ -24,6 +24,7 @@ Target projects: ASP.NET + Blazor + Worker solutions using Onion/Screaming Archi
 │   ├── bugfix.agent.md           # Bugfix with regression test
 │   ├── code-analysis.agent.md    # StyleCop/Roslyn violation fixer
 │   ├── debug.agent.md            # Debug engineer (App Insights + Playwright)
+│   ├── devops.agent.md           # Azure infra + GitHub Actions CI/CD
 │   ├── git.agent.md              # GitFlow branching + .gitignore
 │   ├── planner.agent.md          # Feature plan creator
 ├── instructions/
