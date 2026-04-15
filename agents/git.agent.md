@@ -320,10 +320,8 @@ _specs/
 ```
 
 Adapt the template based on the project:
-- If using **DACPAC / SQL Server Data Tools**, add: `*.dbmdl`, `*.jfm`, `*.refactorlog`
 - If using **Playwright / E2E tests**, add: `playwright/.cache/`
 - If using **Azurite / local storage emulator**, add: `__blobstorage__/`, `__queuestorage__/`, `__azurite_db*`
-- If using **SonarQube**, add: `.sonarqube/`, `.scannerwork/`
 
 Always ask the user if they have specific additions before writing the file.
 

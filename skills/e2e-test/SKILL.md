@@ -18,7 +18,7 @@ Run end-to-end browser tests against the running {{SolutionName}} stack using th
 
 ## 1 — Port Map
 
-> Ports are project-specific — read from `Properties/launchSettings.json` for each host project. The `/init` skill sets `{{StsPort}}`, `{{BffPort}}`, `{{ClientPort}}`.
+> Ports are project-specific — read from `Properties/launchSettings.json` for each host project. The `/init` skill sets  `{{ClientPort}}`.
 
 | Service | URL | Purpose |
 |---------|-----|---------|

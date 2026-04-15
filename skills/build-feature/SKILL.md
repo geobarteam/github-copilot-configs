@@ -1,6 +1,6 @@
 ---
 name: build-feature
-description: "Use when implementing a new feature, vertical slice, or multi-layer change in {{SolutionName}} after a _plans/<FeatureName>.md (repo root) is approved. Provides step-by-step Red-Green-Refactor implementation procedure with real code templates for each layer: Domain entity, Application command/query/handler, Persistence repository, Contracts DTOs, BFF controller, Database SQL, Client ViewModel/ServiceClient/Refit. Use for: building new features, adding CRUD operations, implementing vertical slices, following the 7-step layer workflow."
+description: "Use when implementing a new feature, vertical slice, or multi-layer change in {{SolutionName}} after a _plans/<FeatureName>.md (repo root) is approved. Provides step-by-step Red-Green-Refactor implementation procedure with real code templates for each layer: Domain entity, Application command/query/handler, Persistence repository, Contracts DTOs, Controller, DbUp migration, Presentation ViewModel/ServiceClient/Refit. Use for: building new features, adding CRUD operations, implementing vertical slices, following the 7-step layer workflow."
 argument-hint: "Which plan step to implement, e.g. 'Step 1 — Domain entity'"
 ---
 
@@ -124,26 +124,23 @@ Location: `src/Host/Client/Controllers/<Feature>Controller.cs`
 - POST: execute command → `Result<T>` → `BadRequest(error)` or `Ok()`. Audit via `LogActionAsync`.
 - Every action: `CancellationToken` as last param, `try/catch` with structured logging.
 
-> Full patterns (GET/POST/PUT/DELETE, audit logging, NServiceBus transactional session): see `bff-controller.instructions.md`.
+> Full patterns (GET/POST/PUT/DELETE, audit logging): see `bff-controller.instructions.md`.
 
 Test: `Test/Integration/Endpoints/` — HTTP tests with `CustomWebApplicationFactory`.
 
 ---
 
-### Step 6 — Database SQL
+### Step 6 — Database Migration (DbUp)
 
-Location: `src/Database/Tables/<Entity>.sql`
+Create a new DbUp migration script using the `/add-dbup` skill. The script goes in `src/Database/Scripts/` with sequential numbering:
 
-```sql
-CREATE TABLE [<Schema>].[<Entity>] (
-    [Id]     INT           IDENTITY (1, 1) NOT NULL,
-    [Name]   VARCHAR (50)  NOT NULL,
-    -- Encrypted columns use: COLLATE Latin1_General_BIN2 ENCRYPTED WITH (...)
-    CONSTRAINT [PK_<Entity>] PRIMARY KEY CLUSTERED ([Id] ASC)
-);
+```
+src/Database/Scripts/<NNNN>_Create<Entity>Table.sql
 ```
 
+> Full patterns (naming, templates, idempotency, script rules): see `/add-dbup` skill.
 
+Ensure the EF Core `IEntityTypeConfiguration<T>` from Step 2 matches the SQL schema exactly (table name, column types, nullability, indexes).
 
 ---
 

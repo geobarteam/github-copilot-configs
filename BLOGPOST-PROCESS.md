@@ -287,7 +287,7 @@ as the pattern across all layers).
 - `src/Core/Persistence/Repositories/SubscriptionRepository.cs` *(create)*
 - `src/Core/Application/Functionalities/Subscriptions/Queries/GetSubscriptions/` *(create)*
 - `src/Host/BFF/Controllers/SubscriptionController.cs` *(create — GET only)*
-- `src/Database/Tables/Subscription.sql` *(create)*
+- `src/Database/Scripts/0001_CreateSubscriptionTable.sql` *(create)*
 - `src/Presentation/Subscriptions/Services/SubscriptionService.cs` *(create — real Refit)*
 - `src/Presentation/Shared/ServiceClients/Bff/Clients/ISubscriptionClient.cs` *(create)*
 - `src/Test/Unit/Application/Subscriptions/GetSubscriptionsQueryTests.cs` *(create)*
@@ -307,9 +307,9 @@ as the pattern across all layers).
 - SubscriptionController GET /api/subscriptions?patientId={id}
 - ISubscriptionClient (Refit), SubscriptionService (replaces stub)
 - SubscriptionConfiguration (fluent API)
-- Subscription.sql (CREATE TABLE)
+- 0001_CreateSubscriptionTable.sql (CREATE TABLE)
 
-**DB changes**: `src/Database/Tables/Subscription.sql`
+**DB changes**: `src/Database/Scripts/0001_CreateSubscriptionTable.sql`
 
 **🛑 HUMAN GATE**:
 - [ ] Behavioral: Integration tests pass; GET /api/subscriptions returns list
@@ -391,7 +391,6 @@ Before writing a plan, the AI agent should confirm it has enough information. We
 4. **Relationships to existing entities?** Foreign keys, navigation properties?
 5. **New API endpoints?** Verbs, routes, request/response shapes?
 6. **New Blazor pages?** Routes, layouts, Components?
-7. **NServiceBus events or messages?** Publishing, handling, side effects?
 8. **Authentication claims needed?** Does the controller read user claims that need to be configured in the token server?
 
 If any answer is missing, the AI asks focused questions at this stage and not later — not halfway through implementation.

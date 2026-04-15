@@ -92,5 +92,5 @@ Ask for any additional details if not provided: entity properties, relationships
 - **RED first.** Write the test, run it, confirm it fails. Only then write production code.
 - Every file follows the exact conventions from the reference feature (namespace, folder, naming).
 - Follow the `refit-client.instructions.md` for steps 5–7.
-- Run **Code Analysis** and **Sonar Review** agents after each step.
+- Run **Code Analysis** agent after each step.
 - **Mark done.** After the user approves a step, update `_plans/<FeatureName>.md` — change `[ ]` → `[x]` on that step's HUMAN GATE checkboxes. When resuming work, find the first unchecked `[ ]` to know where to continue.

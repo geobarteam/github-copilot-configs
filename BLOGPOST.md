@@ -156,7 +156,7 @@ templates/
 └── Library/                       # .NET library template
 ```
 
-**Shared files** provide common guidance — NServiceBus patterns, persistence layer conventions, test structure, domain entity rules, and reusable skills like PDF/Excel generation or feature scaffolding.
+**Shared files** provide common guidance — persistence layer conventions, test structure, domain entity rules, and reusable skills like PDF/Excel generation or feature scaffolding.
 
 **Template-specific files** override shared files when architecture differs. A Blazor Server project needs different instructions than a class library.
 
@@ -182,7 +182,7 @@ The template system distributes a complete AI coding environment:
 | `CLAUDE.md` | Claude Code / Opus-specific instructions |
 | `AGENTS.md` | Workflow rules: planning gates, Red-Green-Refactor loops, human gates |
 | Agent definitions (`.agent.md`) | Multi-turn workflow orchestrators (e.g., planner agent) |
-| Instructions (`.instructions.md`) | Domain-specific rules (BFF controllers, persistence, NServiceBus) |
+| Instructions (`.instructions.md`) | Domain-specific rules (BFF controllers, persistence) |
 | Skills (`SKILL.md`) | Reusable code generation tasks (add endpoint, build feature, generate reports) |
 | Prompts (`.prompt.md`) | Reusable query templates |
 
@@ -196,8 +196,6 @@ Templates use `{{MustacheStyle}}` placeholders that get replaced with project-sp
 | `{{NamespaceRoot}}` | `Contoso.FindMyDoctor` |
 | `{{DbContextName}}` | `FindMyDoctorDbContext` |
 | `{{TestExePath}}` | `.\src\Test\Unit\bin\Debug\net10.0\Contoso.FindMyDoctor.Unit.Tests.exe` |
-| `{{SonarProjectKey}}` | `contoso-find-my-doctor` |
-| `{{SonarServerUrl}}` | `https://sonarqube.example.com` |
 
 **Derived tokens** are computed automatically — solution file names, project file paths, and other values that follow naming conventions.
 

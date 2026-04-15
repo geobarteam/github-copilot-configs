@@ -66,7 +66,6 @@ Lines 263, 298-299, 329, 612 all use `dotnet test` instead of `{{TestExePath}}`.
 These files are listed in the guide (lines 43-47, 331-335, 450-456) but don't exist on disk:
 - `instructions/application-layer.instructions.md` — referenced for `src/Core/Application/**`
 - `instructions/bff-controller.instructions.md` — referenced for `src/Host/BFF/**`
-- `instructions/nservicebus.instructions.md` — referenced for NServiceBus handlers/contracts
 - `instructions/blazor-presentation.instructions.md` — referenced for Presentation pages/ViewModels
 
 **Fix**: Create these four files. They are part of the template library and should contain the patterns already documented in skills/instructions. Alternatively, remove them from COPILOT-GUIDE.md if they are intentionally deferred.
@@ -161,7 +160,7 @@ The Red-Green-Refactor-Proof loop is fully defined in:
 
 The e2e-test skill hardcodes localhost ports. The `/init` skill should detect these from `launchSettings.json` and replace them, or the skill should read ports at runtime.
 
-**Fix**: Add port discovery to `/init` skill (read `Properties/launchSettings.json` for each host project). Introduce tokens `{{StsPort}}`, `{{BffPort}}`, `{{WfePort}}` or alternatively instruct the skill to read ports from launchSettings at runtime.
+**Fix**: Add port discovery to `/init` skill (read `Properties/launchSettings.json` for each host project). Introduce tokens `{{ClientPort}}` or alternatively instruct the skill to read ports from launchSettings at runtime.
 
 ### T2. `/init` skill doesn't cover `debug.agent.md` tokens
 

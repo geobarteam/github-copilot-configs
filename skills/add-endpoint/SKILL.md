@@ -34,40 +34,17 @@ Add a new API endpoint to an existing feature. This skill covers Application →
 
 Location: `src/Core/Application/Functionalities/<Feature>/Queries/<Action>/`
 
-```csharp
-// Interface
-namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Queries.<Action>;
+- Interface: `IGet<Entity>By<Criteria>Query` with `Task<<Entity>> Execute(<paramType> <param>)`.
+- Implementation: delegates to `I<Entity>Repository`. Use `AsNoTracking` in repository.
+- DI: auto-registered by `ApplicationModule` (suffix `Query` → Scoped).
 
-public interface IGet<Entity>By<Criteria>Query
-{
-    Task<<Entity>> Execute(<paramType> <param>);
-}
-
-// Implementation
-public class Get<Entity>By<Criteria>Query(I<Entity>Repository repository) : IGet<Entity>By<Criteria>Query
-{
-    private readonly I<Entity>Repository _repository = repository
-        ?? throw new ArgumentNullException(nameof(repository));
-
-    public async Task<<Entity>> Execute(<paramType> <param>)
-        => await _repository.GetBy<Criteria>(<param>);  // AsNoTracking in repository
-}
-```
-
-DI: auto-registered by `ApplicationModule` (suffix `Query` → Scoped).
+> Full pattern: see `application-layer.instructions.md`.
 
 ### 2. Repository Method (if needed)
 
-Add method to `I<Entity>Repository` interface and `<Entity>Repository` implementation:
+Add method to `I<Entity>Repository` interface and `<Entity>Repository` implementation. Always `AsNoTracking()` for reads.
 
-```csharp
-// In I<Entity>Repository
-Task<<Entity>?> GetBy<Criteria>(<paramType> <param>);
-
-// In <Entity>Repository
-public async Task<<Entity>?> GetBy<Criteria>(<paramType> <param>)
-    => await dbContext.<Entities>.AsNoTracking().FirstOrDefaultAsync(e => e.<Prop> == <param>);
-```
+> Full pattern: see `persistence-layer.instructions.md`.
 
 ### 3. DTO (if needed)
 
@@ -80,41 +57,9 @@ public record <Entity>DetailDto(int Id, string Name, ...);
 
 ### 4. Controller Action
 
-Add to existing controller in `src/Host/Client/Controllers/`:
+Add to existing controller in `src/Host/Client/Controllers/`. Inject the new query in the constructor. Pattern: execute query → null check (`NotFound()`) → audit log → map to DTO → `Ok(dto)`. Always include `CancellationToken` and `try/catch` with structured logging.
 
-```csharp
-[HttpGet("{id}")]
-public async Task<ActionResult<<Entity>DetailDto>> GetById([FromRoute] int id, CancellationToken cancellationToken)
-{
-    try
-    {
-        var entity = await _getByIdQuery.Execute(id);
-        if (entity is null) return NotFound();
-
-        // Audit logging
-        var correlationId = _correlationContextAccessor?.Current?.CorrelationId ?? Guid.NewGuid().ToString();
-        await _auditLogger.LogMessageAsync(
-            new GdprAuditLog(
-                entity.INS ?? entity.Name,
-                _userContextAccessor?.Current?.UserId,
-                _userContextAccessor?.Current?.UserName,
-                "Get <entity> by id",
-                AuditAction.Read,
-                AuditActionStatus.Succeeded,
-                correlationId),
-            cancellationToken);
-
-        return Ok(new <Entity>DetailDto(entity.Id, entity.Name, ...));
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "{Controller} has throw an exception.", nameof(<Feature>Controller));
-        throw;
-    }
-}
-```
-
-Inject the new query in the controller's constructor.
+> Full pattern (GET action, audit logging): see `bff-controller.instructions.md`.
 
 ### 5. Refit Client Method
 
@@ -166,91 +111,18 @@ public async Task<<Entity>Model> GetByIdAsync(int id)
 
 Location: `src/Core/Application/Functionalities/<Feature>/Commands/<Action>/`
 
-```csharp
-// Command
-public record <Action><Entity>Command(string Name, string Email)
-{
-    public (bool IsValid, List<string> Errors) Validate()
-    {
-        var errors = new List<string>();
-        if (string.IsNullOrEmpty(Name)) errors.Add("Name cannot be empty");
-        return (!errors.Any(), errors);
-    }
-}
+- **Command**: `record <Action><Entity>Command(...)` with `Validate()` returning `(bool IsValid, List<string> Errors)`.
+- **Handler**: `<Action><Entity>CommandHandler` implementing `ICommandHandler<<Action><Entity>Command, Result<Unit>>`. Validates first, then persists.
+- DI: auto-registered by `ApplicationModule` (suffix `Handler` → Scoped).
 
-// Handler
-public class <Action><Entity>CommandHandler(I<Entity>Repository repository)
-    : ICommandHandler<<Action><Entity>Command, Result<Unit>>
-{
-    private readonly I<Entity>Repository _repository = repository
-        ?? throw new ArgumentNullException(nameof(repository));
-
-    public async Task<Result<Unit>> Execute(<Action><Entity>Command command)
-    {
-        Result<Unit> validateResult = ValidateCommand(command);
-        if (!validateResult.IsSuccess)
-            return validateResult;
-
-        // Business logic here
-        await _repository.SaveChangesAsync();
-        return new Result<Unit>(Unit.Default());
-    }
-
-    private static Result<Unit> ValidateCommand(<Action><Entity>Command command)
-    {
-        (bool isValid, List<string> errors) = command.Validate();
-        if (!isValid)
-        {
-            var sb = new StringBuilder();
-            errors.ForEach(err => sb.Append($"{err} {Environment.NewLine}"));
-            return new Result<Unit>(sb.ToString());
-        }
-        return new Result<Unit>(Unit.Default());
-    }
-}
-```
+> Full pattern: see `application-layer.instructions.md`.
 
 ### 2. Controller Action
 
-```csharp
-[HttpPost]  // or [HttpPut("{id}")] or [HttpDelete("{id}")]
-public async Task<ActionResult> <Action>([FromBody] <Action><Entity>Dto dto, CancellationToken cancellationToken)
-{
-    try
-    {
-        var result = await _auditLogger.LogActionAsync<Unit>(
-            new GdprAuditLog(
-                dto.Name,
-                _userContextAccessor?.Current?.UserId,
-                _userContextAccessor?.Current?.UserName,
-                "<Action> <entity>",
-                AuditAction.Create,  // or Update, Delete
-                AuditActionStatus.Initiated,
-                _correlationContextAccessor?.Current?.CorrelationId ?? Guid.NewGuid().ToString()),
-            async () => await _commandHandler.Execute(new <Action><Entity>Command(dto.Name, dto.Email)),
-            cancellationToken);
+Add to existing controller in `src/Host/Client/Controllers/`. Use `_auditLogger.LogActionAsync<Unit>()` wrapping the command execution. Map `Result<T>` to HTTP: `!IsSuccess` → `BadRequest(error)`, success → `Ok()`.
 
-        if (!result.IsSuccess)
-            return BadRequest(result.Error);
-        return Ok();
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "{Controller} has throw an exception.", nameof(<Feature>Controller));
-        throw;
-    }
-}
-```
+> Full pattern (POST/PUT/DELETE, audit logging): see `bff-controller.instructions.md`.
 
-### 3. Transactional Session
-
-If the command publishes NServiceBus events, add `[RequiresTransactionalSession]` to the action:
-
-```csharp
-[HttpPost]
-[RequiresTransactionalSession]
-public async Task<ActionResult> <Action>(...) { ... }
-```
 
 ---
 

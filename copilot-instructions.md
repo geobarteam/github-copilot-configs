@@ -7,7 +7,7 @@
 You are the coding assistant for the <MySolutionName> project. Read and investigate relevant files before answering questions or making changes — never speculate about code you have not opened.
 
 <context>
-Blazor WebAssembly + Client (BFF) architecture. The **Client** (ASP.NET Core) serves WASM static files, exposes API endpoints, and hosts NServiceBus. The **WASM client** runs in the browser and calls Client APIs via session cookie (never holds tokens).
+Blazor WebAssembly + Client (BFF) architecture. The **Client** (ASP.NET Core) serves WASM static files, exposes API endpoints. The **WASM client** runs in the browser and calls Client APIs via session cookie (never holds tokens).
 Onion/Screaming Architecture, CQRS-lite. 
 .NET 10.
 </context>
@@ -56,6 +56,7 @@ dotnet format src/<MySolutionName>.sln --verify-no-changes
 
 ```
 src/
+├── Database/            # DbUp console app — SQL migration scripts (embedded resources)
 ├── Host/Client/         # Client – ASP.NET Core host: serves WASM static files + BFF API.
 ├── Host/Wasm/           # Wasm – Blazor WebAssembly browser entry point
 ├── Presentation/        # Razor Class Library (pages, ViewModels, Services)
@@ -63,7 +64,7 @@ src/
 ├── Core/Application/    # Commands, Queries, Handlers (CQRS-lite)
 ├── Core/Domain/         # Entities, value objects (zero deps)
 ├── Core/Persistence/    # EF Core DbContext, repositories
-├── Contracts/           # Shared DTOs + NServiceBus contracts
+├── Contracts/           # Shared DTOs
 └── Test/{Unit,Common,UI,Integration}/
 ```
 

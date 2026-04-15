@@ -109,7 +109,7 @@ public class Register<Entity>CommandHandler(
 ## Rules
 
 - **DI**: auto-registered by `ApplicationModule` — suffix `Query` → Scoped, suffix `CommandHandler` → Scoped.
-- **No infrastructure concerns** — no EF, no HTTP, no NServiceBus types. Only `IMessagingService` abstraction.
+- **No infrastructure concerns** — no EF, no HTTP. Only `IMessagingService` abstraction.
 - **Repository interfaces** live here (`I<Entity>Repository`), implementations live in Persistence.
 - **CancellationToken** on every async method signature.
 - **One query/command per file.** File matches class name.

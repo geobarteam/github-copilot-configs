@@ -163,5 +163,5 @@ This means a single step may touch Domain, Application, Persistence, Contracts, 
 7. **Follow existing patterns.** Read the reference feature across all layers first. Mirror its structure.
 8. **Flag Risk Areas** with ⚠️ and explain what the reviewer should verify.
 9. **Respect the dependency matrix** from `copilot-instructions.md`. Order steps so no step depends on a later step.
-10. **DB changes are SQL only** — `Database/Tables/`, user deploys via Schema Compare.
+10. **DB changes are DbUp migration scripts** — `Database/Scripts/`, numbered sequentially. Use `/add-dbup` skill to create new scripts.
 11. **Keep the plan updatable** — mark HUMAN GATE checkboxes `[x]` as steps are approved. First unchecked `[ ]` = next step to implement.

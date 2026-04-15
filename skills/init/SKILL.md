@@ -23,13 +23,10 @@ Analyze the current .NET solution and replace `{{token}}` placeholders in all `.
 | `{{NamespaceRoot}}` | Root namespace prefix (e.g., `Contoso.MyApp`) | Yes |
 | `{{DbContextName}}` | EF Core `DbContext` subclass name | Yes |
 | `{{TestExePath}}` | Relative path to test `.exe` (MTP) | Yes |
-| `{{SonarProjectKey}}` | SonarQube project key | No — ask user |
-| `{{SonarServerUrl}}` | SonarQube server URL | No — ask user |
 | `{{CompanyName}}` | Company name for copyright headers | Partial — detect or ask |
 | `{{CopilotSyncToolName}}` | dotnet tool name for copilot-sync | No — ask user |
-| `{{StsPort}}` | STS localhost port (e.g., `5001`) | Yes — from launchSettings.json |
-| `{{BffPort}}` | BFF localhost port (e.g., `7094`) | Yes — from launchSettings.json |
-| `{{WfePort}}` | WFE localhost port (e.g., `7259`) | Yes — from launchSettings.json |
+| `{{ClientPort}}` | Client localhost port (e.g., `5001`) | Yes — from launchSettings.json |
+
 
 ---
 
@@ -102,12 +99,12 @@ Also check for "copyright" or "company" in existing .cs file headers.
 - If found → use it.
 - If not → ask the user.
 
-#### 7. Localhost Ports (`{{StsPort}}`, `{{BffPort}}`, `{{WfePort}}`)
+#### 7. Localhost Ports (`{{ClientPort}}`)
 
 ```
 Read Properties/launchSettings.json from each host project:
   - src/STS/**/launchSettings.json → StsPort
-  - src/Host/BFF/**/launchSettings.json → BffPort
+  - src/Host/Client/**/launchSettings.json → ClientPort
 ```
 
 - Look for `applicationUrl` in the `https` or project profile.
@@ -134,24 +131,17 @@ Are these correct? (Adjust any values before proceeding.)
 
 **Ask for missing values:**
 
-- `SonarProjectKey` — "What is your SonarQube project key? (Leave blank to skip SonarQube configuration)"
-- `SonarServerUrl` — "What is your SonarQube server URL? (e.g., https://sonarqube.example.com)"
 - `CopilotSyncToolName` — "What is the copilot-sync dotnet tool package name? (Leave blank if not using copilot-sync)"
-
-If the user leaves SonarQube fields blank, keep the `{{SonarProjectKey}}` and `{{SonarServerUrl}}` tokens as-is (they serve as visible reminders to configure later).
 
 ### Phase 3 — Architecture Adaptation
 
 Based on the detected architecture, update the `<context>` block in `copilot-instructions.md`:
 
-**Blazor Server** (default template):
-```
-Blazor Server solution: WFE (Blazor Server) · BFF (Web API + NServiceBus + Hangfire) · Worker · SQL Server DACPAC.
-```
+
 
 **Blazor WASM**:
 ```
-Blazor WASM solution: WFE (Blazor WebAssembly) · BFF (Web API + NServiceBus + Hangfire) · Worker · SQL Server DACPAC.
+Blazor WASM solution: WFE (Blazor WebAssembly) · BFF (Web API) · Worker · DbUp (SQL Server).
 ```
 
 Also update the `refit-client.instructions.md` scope note if architecture affects it.
@@ -208,8 +198,6 @@ If no `.copilotrc.json` exists at the repo root, create one to record the token 
     "NamespaceRoot": "<value>",
     "DbContextName": "<value>",
     "TestExePath": "<value>",
-    "SonarProjectKey": "<value or empty>",
-    "SonarServerUrl": "<value or empty>",
     "CompanyName": "<value>",
     "CopilotSyncToolName": "<value or empty>",
     "StsPort": "<value>",

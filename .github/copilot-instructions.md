@@ -26,21 +26,19 @@ Target projects: ASP.NET + Blazor + Worker solutions using Onion/Screaming Archi
 │   ├── debug.agent.md            # Debug engineer (App Insights + Playwright)
 │   ├── git.agent.md              # GitFlow branching + .gitignore
 │   ├── planner.agent.md          # Feature plan creator
-│   └── sonar-review.agent.md     # SonarQube review
 ├── instructions/
 │   ├── application-layer.instructions.md   # src/Core/Application/**
 │   ├── bff-controller.instructions.md      # src/Host/BFF/**
 │   ├── blazor-presentation.instructions.md # src/Presentation/**
 │   ├── domain-entity.instructions.md       # src/Core/Domain/**
-│   ├── nservicebus.instructions.md         # NServiceBus handlers/contracts
 │   ├── persistence-layer.instructions.md   # src/Core/Persistence/**
 │   ├── refit-client.instructions.md        # Refit service clients (WASM)
 │   └── tests.instructions.md              # src/Test/**
 ├── skills/
 │   ├── add-blazor-module/        # Add Blazor WASM module (MVVM + HttpClient)
 │   ├── add-blazor-page/          # Add Blazor Server page (ViewModel + Refit)
+│   ├── add-dbup/                 # Add DbUp migration script
 │   ├── add-endpoint/             # Add API endpoint (vertical slice)
-│   ├── add-nservicebus/          # Add NServiceBus events/messages/handlers
 │   ├── build-feature/            # Full feature build (RGR per step)
 │   ├── csharp-coding-standards/  # Reference-only (invocable: false)
 │   ├── e2e-test/                 # Full-stack browser testing (Playwright MCP)

@@ -1,5 +1,5 @@
 ---
-description: "Layer guidance for API controllers. Covers controller action patterns, Result<T> to HTTP mapping, audit logging (IAuditLogger/GdprAuditLog), correlation IDs, user context, and NServiceBus transactional session usage. Activates when editing API controller files."
+description: "Layer guidance for API controllers. Covers controller action patterns, Result<T> to HTTP mapping, audit logging (IAuditLogger/GdprAuditLog), correlation IDs, user context. Activates when editing API controller files."
 applyTo: "src/Host/Client/**"
 ---
 # API Controller Conventions
@@ -94,21 +94,6 @@ public async Task<ActionResult> Create(
         _logger.LogError(ex, "{Controller} has thrown an exception.", nameof(<Feature>Controller));
         throw;
     }
-}
-```
-
-## NServiceBus Transactional Session
-
-For commands that publish NServiceBus events within a DB transaction:
-
-```csharp
-[HttpPost]
-[RequiresTransactionalSession]
-public async Task<ActionResult> Register(
-    [FromBody] Register<Entity>Dto dto, CancellationToken cancellationToken)
-{
-    // Same pattern as above — the [RequiresTransactionalSession] attribute
-    // ensures the NServiceBus outbox is committed with the DB transaction.
 }
 ```
 
