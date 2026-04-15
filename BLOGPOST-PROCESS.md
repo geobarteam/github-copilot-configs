@@ -2,6 +2,8 @@
 
 *How to move from vibe coding to a disciplined, verifiable development process when working with AI coding assistants.*
 
+> **Part 2 of 2.** This article walks through the spec-driven process with concrete examples. For best practices and the copilot-sync template system, see [Part 1: Best Practices for AI-Assisted Coding](BLOGPOST.md).
+
 ---
 
 ## The Problem: Vibe Coding
@@ -260,7 +262,7 @@ as the pattern across all layers).
 
 **RED** *(write this test first)*:
 - Test: `InitializeAsync_WithSubscriptions_LoadsList`
-- Command: `dotnet test --project src/Test/Unit/ --filter "SubscriptionsViewModelTests"`
+- Command: `{{TestExePath}} --filter "SubscriptionsViewModelTests"`
 
 **GREEN**:
 - SubscriptionDto record with Id, MedicationName, StartDate, EndDate
@@ -295,8 +297,8 @@ as the pattern across all layers).
 - Unit: `Execute_WithActiveSubscriptions_ReturnsList` (mock repo)
 - Integration: `GetSubscriptions_Authenticated_ReturnsOk` (WebApplicationFactory + SQLite)
 - Integration: `GetSubscriptions_WrongPatient_ReturnsForbidden`
-- Command: `dotnet test --project src/Test/Unit/ --filter "GetSubscriptionsQueryTests"`
-- Command: `dotnet test --project src/Test/Integration/ --filter "GetSubscriptionsTest"`
+- Command: `{{TestExePath}} --filter "GetSubscriptionsQueryTests"`
+- Command: `{{TestExePath}} --filter "GetSubscriptionsTest"`
 
 **GREEN**:
 - Subscription entity (Id, PatientId, MedicationName, StartDate, EndDate, CreatedBy)
@@ -326,7 +328,7 @@ as the pattern across all layers).
 **RED**:
 - Test: `Submit_EmptyMedicationName_ShowsValidationError`
 - Test: `Submit_ValidData_CallsService`
-- Command: `dotnet test --project src/Test/Unit/ --filter "AddSubscriptionViewModelTests"`
+- Command: `{{TestExePath}} --filter "AddSubscriptionViewModelTests"`
 
 **GREEN**:
 - AddSubscriptionDto record (PatientId, MedicationName, StartDate, EndDate)
@@ -543,7 +545,7 @@ No context is lost. No work is repeated. Any agent, in any session, picks up exa
 
 The entire process described in this article isn't a convention developers must remember. It is **encoded as instruction files** that the AI reads and follows automatically.
 
-At NIHDI, we distribute these files to every project via a centralised template system. But the pattern works with any distribution method — even a shared Git repository that teams copy from.
+We distribute these files to every project via a centralised template system. But the pattern works with any distribution method — even a shared Git repository that teams copy from.
 
 Here are the key files and what each one teaches the AI:
 
@@ -609,10 +611,10 @@ Key instructions it contains:
 <critical_rules>
 1. After every code change, run all three:
    dotnet build src/MySolution.sln
-   dotnet test --project src/Test/Unit/
+   {{TestExePath}}
    dotnet format src/MySolution.sln --verify-no-changes
 
-2. Never throw for business errors — use Result<T> from Nihdi.Core.Functional.
+2. Never throw for business errors — use Result<T>.
 
 3. DI via *Module + Scrutor suffix scanning only. Never services.AddScoped<T>() in Program.cs.
 
@@ -746,4 +748,6 @@ AI coding assistants are powerful. But power without control is just risk. Spec-
 
 ---
 
-*This article describes practices developed at NIHDI and encoded in the [Nihdi.Copilot.Sync](https://github.com/nickaerts/nihdi-copilot-sync) project, which distributes AI coding instructions as versioned templates across .NET projects.*
+*This article describes practices encoded in the [copilot-sync](https://github.com/nickaerts/copilot-sync) project, which distributes AI coding instructions as versioned templates across .NET projects.*
+
+> **Previous:** [Part 1 — Best Practices for AI-Assisted Coding with GitHub Copilot](BLOGPOST.md)

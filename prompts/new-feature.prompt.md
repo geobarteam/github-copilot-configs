@@ -14,15 +14,15 @@ Ask for any additional details if not provided: entity properties, relationships
 
 ## Before You Start
 
-1. **Identify the reference feature** — ask the user which existing feature in the codebase to use as the pattern. If the user doesn't specify one, list the features visible under `src/Core/Domain/Functionalities/`, `src/Presentation/`, or `src/Host/BFF/Controllers/` and let them pick. Then read its implementation across all layers:
+1. **Identify the reference feature** — ask the user which existing feature in the codebase to use as the pattern. If the user doesn't specify one, list the features visible under `src/Core/Domain/Functionalities/`, `src/Client/`, or `src/Host/BFF/Controllers/` and let them pick. Then read its implementation across all layers:
    - `Core/Domain/Shared/Entities/<ReferenceEntity>.cs`
    - `Core/Application/Functionalities/<ReferenceFeature>/` (all files)
    - `Core/Persistence/Repositories/<ReferenceEntity>Repository.cs`
    - `Contracts/<ReferenceFeature>/<ReferenceEntity>Dto.cs`
    - `Host/BFF/Controllers/<ReferenceEntity>Controller.cs`
-   - `Presentation/Shared/ServiceClients/Bff/I<ReferenceEntity>ServiceClient.cs`
-   - `Presentation/<ReferenceFeature>/` (all files: Services, ViewModels, Models, Pages)
-   - `Test/Unit/Presentation/<ReferenceFeature>/` (all tests)
+   - `Client/Shared/ServiceClients/Bff/I<ReferenceEntity>ServiceClient.cs`
+   - `Client/<ReferenceFeature>/` (all files: Services, ViewModels, Models, Pages)
+   - `Test/Unit/Client/<ReferenceFeature>/` (all tests)
 
 2. **Create `_plans/<FeatureName>.md`** at the repo root (e.g. `_plans/MyPrescriptions.md`) using this template:
 
@@ -61,24 +61,24 @@ Ask for any additional details if not provided: entity properties, relationships
 **REFACTOR**: none expected.
 
 ## Step 5 — Refit Client + Feature Service + Model
-**Scope**: `Presentation/Shared/ServiceClients/Bff/I<Feature>ServiceClient.cs`,
-  `Presentation/<Feature>s/Services/I<Feature>sService.cs`,
-  `Presentation/<Feature>s/Services/<Feature>sService.cs`,
-  `Presentation/<Feature>s/Models/<Feature>Model.cs`
-**RED**: `Test/Unit/Presentation/<Feature>s/Services/<Feature>sServiceTest.cs` — mock Refit client, assert DTO→Model mapping
+**Scope**: `Client/Shared/ServiceClients/Bff/I<Feature>ServiceClient.cs`,
+  `Client/<Feature>s/Services/I<Feature>sService.cs`,
+  `Client/<Feature>s/Services/<Feature>sService.cs`,
+  `Client/<Feature>s/Models/<Feature>Model.cs`
+**RED**: `Test/Unit/Client/<Feature>s/Services/<Feature>sServiceTest.cs` — mock Refit client, assert DTO→Model mapping
 **GREEN**: Refit interface (GET/POST), service maps DTO→Model, register client in `BffServiceClients.AddBffServiceClients()`.
 **REFACTOR**: none expected.
 
 ## Step 6 — ViewModel
-**Scope**: `Presentation/<Feature>s/ViewModels/I<Feature>sViewModel.cs`,
-  `Presentation/<Feature>s/ViewModels/<Feature>sViewModel.cs`
-**RED**: `Test/Unit/Presentation/<Feature>s/ViewModels/<Feature>sViewModelTest.cs` — InitializeAsync, Add<Feature>
+**Scope**: `Client/<Feature>s/ViewModels/I<Feature>sViewModel.cs`,
+  `Client/<Feature>s/ViewModels/<Feature>sViewModel.cs`
+**RED**: `Test/Unit/Client/<Feature>s/ViewModels/<Feature>sViewModelTest.cs` — InitializeAsync, Add<Feature>
 **GREEN**: Inject service + ISnackbar + AuthenticationStateProvider. IsBusy + InitializeAsync + Add<Feature>.
 **REFACTOR**: none expected.
 
 ## Step 7 — Razor Page + bUnit Test
-**Scope**: `Presentation/<Feature>s/Pages/<Feature>sPage.razor`,
-  `Presentation/<Feature>s/Pages/<Feature>sPage.razor.cs`
+**Scope**: `Client/<Feature>s/Pages/<Feature>sPage.razor`,
+  `Client/<Feature>s/Pages/<Feature>sPage.razor.cs`
 **RED**: `Test/UI/<Feature>s/Pages/<Feature>sPageTests.cs` — render with mock ViewModel, assert content appears
 **GREEN**: MudDataGrid bound to ViewModel. MudForm for add. @attribute [Authorize].
 **REFACTOR**: Add localization resource file if needed.

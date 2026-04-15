@@ -1,15 +1,15 @@
-# Copilot Instructions — {{SolutionName}}
+# Copilot Instructions — <MySolutionName>
 
 <!-- Optimized for Claude Sonnet 4.6: XML tags for critical sections, markdown headers
      for structure, concise sections, one example per pattern. Anthropic best practices
      applied: role assignment, clear-not-aggressive language, investigate before answering. -->
 
-You are the coding assistant for the {{SolutionName}} project. Read and investigate relevant files before answering questions or making changes — never speculate about code you have not opened.
+You are the coding assistant for the <MySolutionName> project. Read and investigate relevant files before answering questions or making changes — never speculate about code you have not opened.
 
 <context>
-Blazor Server solution: WFE (Blazor Server) · BFF (Web API + NServiceBus + Hangfire) · Worker · SQL Server DACPAC.
-Onion/Screaming Architecture, CQRS-lite. All hosts wired via `Nihdi.Core.Configuration`.
-.NET 10 · MSTest v4 · Moq · `Microsoft.Testing.Platform` · StyleCop (`TreatWarningsAsErrors`).
+Blazor WebAssembly + Client (BFF) architecture. The **Client** (ASP.NET Core) serves WASM static files, exposes API endpoints, and hosts NServiceBus. The **WASM client** runs in the browser and calls Client APIs via session cookie (never holds tokens).
+Onion/Screaming Architecture, CQRS-lite. 
+.NET 10.
 </context>
 
 ---
@@ -19,18 +19,12 @@ Onion/Screaming Architecture, CQRS-lite. All hosts wired via `Nihdi.Core.Configu
 
 1. After every code change, run all three:
 ```
-dotnet build src/{{SolutionName}}.sln
-{{TestExePath}}
-dotnet format src/{{SolutionName}}.sln --verify-no-changes
+dotnet build src/<MySolutionName>.sln
+dotnet test --project src/Test/Unit/
+dotnet format src/<MySolutionName>.sln --verify-no-changes
 ```
-`dotnet test` is not supported — use the `.exe` directly (`Microsoft.Testing.Platform` + .NET 10 SDK).
 
-2. Never throw for business errors — use `Result<T>` from `Nihdi.Core.Functional`:
-```csharp
-// Handler → Result<T>.Failure("msg") or Result<T>.Success(value)
-// Controller → if (!result.IsSuccess) return BadRequest(result.Error); return Ok();
-// Unexpected → _logger.LogError(ex, "{Handler} exception.", nameof(MyHandler)); throw;
-```
+2. Never throw for business errors — use `Result<T>` from LanguageExt.Core. Only throw for truly unexpected errors that should trigger retries or human investigation.
 
 3. DI via `*Module` + Scrutor suffix scanning only. Never `services.AddScoped<T>()` in `Program.cs`.
 
@@ -51,9 +45,9 @@ dotnet format src/{{SolutionName}}.sln --verify-no-changes
 
 - **Changes under `src/` only.** One issue per change.
 - **Features require `_plans/<FeatureName>.md` + user approval first.**
-- **Non-goals**: no new architectures/libraries · no deployment/CI changes · no auth flow changes · no ORM migrations (SQL in `Database/`) · no build-system changes.
+- **Non-goals**: no new architectures/libraries · no deployment/CI changes · no auth flow changes · no build-system changes.
 - **Risk areas** (require human review): Auth/OIDC · PII · shared contracts · domain/application layers · DB schema · controller routes/DTOs · blob/file storage.
-- **Analyzer rules** in `Directory.Build.props` are **fixed** — do not modify.
+- **Analyzer rules** must be fixed in the same step as production code changes — do not defer to a later step. If a change causes new violations, fix them before proceeding.
 </scope>
 
 ---
@@ -62,18 +56,15 @@ dotnet format src/{{SolutionName}}.sln --verify-no-changes
 
 ```
 src/
-├── Host/Web/            # Blazor Server (WFE)
-├── Host/BFF/            # Web API + NServiceBus + Hangfire
-├── Host/Api/            # Secondary Web API
-├── Host/Worker/         # Background worker
+├── Host/Client/         # Client – ASP.NET Core host: serves WASM static files + BFF API.
+├── Host/Wasm/           # Wasm – Blazor WebAssembly browser entry point
 ├── Presentation/        # Razor Class Library (pages, ViewModels, Services)
+├── Infrastructure/      # WASM-side: CookieHandler, BffAuthenticationStateProvider, AntiforgeryTokenStore
 ├── Core/Application/    # Commands, Queries, Handlers (CQRS-lite)
 ├── Core/Domain/         # Entities, value objects (zero deps)
-├── Core/Infrastructure/ # Messaging, external services
 ├── Core/Persistence/    # EF Core DbContext, repositories
 ├── Contracts/           # Shared DTOs + NServiceBus contracts
-├── Database/            # SQL Server DACPAC
-└── Test/{Unit,Bff,Common,UI}/
+└── Test/{Unit,Common,UI,Integration}/
 ```
 
 ---
@@ -92,8 +83,6 @@ src/
 | ViewModel | `<Feature>ViewModel` | `ProductsViewModel` |
 | Test class | `<ClassUnderTest>Tests` | `ProductCreateHandlerTests` |
 | Test method | `<Method>_<Scenario>_<Expected>` | `Execute_EmptyName_ReturnsFailure` |
-| NServiceBus Event | `<Entity><PastTenseVerb>Event` (record) | `ProductCreatedEvent` |
-| NServiceBus Message | `<Entity>Message` (class) | `ProductMessage` |
 
 > **Note**: The examples above use `Product` as a placeholder. Replace with your project's **reference feature** entity — the feature that best represents your naming and structural patterns across all layers.
 
@@ -107,10 +96,10 @@ src/
 |--------|--------|----------|
 | `Query`, `Handler`, `ICommandHandler<,>` | `ApplicationModule` | Scoped |
 | `Repository` | `PersistenceModule` | Scoped |
-| `Service`, `Handler` | `InfrastructureModule` | Scoped |
-| `ViewModel`, `ServiceClient` | `PresentationModule` | Transient |
+| `ViewModel`, `Service` | `PresentationModule` | Transient |
 
 Every service needs an `I<Name>` interface for Scrutor to register it.
+`ClientModule` composes `ApplicationModule` + `PersistenceModule` for the Client host.
 
 ---
 
@@ -120,18 +109,17 @@ Every service needs an `I<Name>` interface for Scrutor to register it.
 |---------|--------------|
 | `Core.Domain` | _(nothing)_ |
 | `Core.Application` | `Core.Domain`, `Contracts` |
-| `Core.Infrastructure` | `Core.Application`, `Core.Domain` |
 | `Core.Persistence` | `Core.Application`, `Core.Domain` |
 | `Contracts` | _(nothing)_ |
-| `Presentation` | `Contracts`, `Core.Application` (interfaces only) |
-| `Host.Bff` | `Core.*`, `Contracts`, `Presentation` |
-| `Host.Wfe` | `Presentation`, `Contracts` |
-| `Test.Unit` | `Core.*`, `Contracts` |
-| `Test.Bff` | `Host.Bff` (Reqnroll + WebApplicationFactory) |
+| `Infrastructure` | `Contracts` (WASM-side: CookieHandler, AuthState, Antiforgery) |
+| `Presentation` | `Contracts`, `Infrastructure` |
+| `Host.Client` | `Core.*`, `Contracts`, `Presentation` |
+| `Host.Wasm` | `Presentation`, `Contracts`, `Infrastructure` |
+| `Test.Unit` | `Presentation`, `Contracts` |
 | `Test.UI` | `Presentation` (bUnit component tests) |
 | `Test.Common` | _(shared test utilities, no prod refs)_ |
 
-**Forbidden**: Domain → anything · Application → Infra/Persistence/Host · Contracts → Core/Host · circular refs.
+**Forbidden**: Domain → anything · Application → Infra/Persistence/Host · Contracts → Core/Host · Infrastructure → Core/Host · Presentation → Host/Persistence · circular refs.
 EF Core only in `Core.Persistence`. Domain entities: plain C#.
 
 ---
@@ -163,8 +151,10 @@ EF Core only in `Core.Persistence`. Domain entities: plain C#.
 
 - AAA (Arrange/Act/Assert), MSTest v4, `[TestClass]` / `[TestMethod]`.
 - Mock at boundary (interfaces only, Moq). No real DB/HTTP in unit tests.
-- BFF integration (`Test.Bff`): Reqnroll (SpecFlow) `.feature` files + step definitions + `CustomWebApplicationFactory<Program, {{DbContextName}}>` + SQLite in-memory + `TestAuthenticationHandler`.
+- Unit tests (`Test/Unit/`): ViewModels, Services, Application handlers. Mirror source structure.
 - UI component (`Test.UI`): bUnit `BunitTest` base class, MSTest, renders Blazor components in isolation.
+- Shared fixtures (`Test/Common/`): `TestData.cs`, `AuthenticationStateProviderMockExtensions`.
+- Integration tests (`Test/Integration/`): `WebApplicationFactory` + SQLite in-memory + fake auth / real authz. See `tests.instructions.md` for full conventions, folder structure, and patterns.
 
 ---
 
@@ -195,73 +185,64 @@ return Ok(result.Value);
 
 ### Auth & User Context
 
-- WFE → OIDC (`AddOpenIdConnectForNihdi`); BFF/Api → JWT (`AddOAuthForNihdi`).
-- WFE → BFF with client-credentials.
-- `UserContextHeaderHandler` sends `Nihdi-User-Id`/`Nihdi-User-Name`; BFF reads via `HttpUserContextAccessor`.
+- Client acts as OIDC confidential client. WASM client **never receives tokens**.
+- Browser holds only an `HttpOnly` session cookie. All WASM → Client calls use `credentials: include` (via `CookieHandler`).
+- State-changing calls (POST/PUT/DELETE/PATCH) include the `X-XSRF-TOKEN` anti-forgery header (via `AntiforgeryTokenStore`).
+- `BffAuthenticationStateProvider` calls `GET /api/user` to retrieve claims; anonymous if not authenticated.
 
 ### Logging
 
-`ILogger<T>` + structured placeholders only. `Nihdi.Core.Configuration` owns Serilog — **no logging config in app code**.
+`ILogger<T>` + structured placeholders only. 
 
-### NServiceBus
-
-- Events: `Contracts/<Feature>/Events/` (record). Messages: `Contracts/<Feature>/Messages/` (class).
-- Handlers: BFF → `Host/BFF/NServiceBusHandlers/`, Worker → `Host/Worker/Handlers/`. All `IHandleMessages<T>`.
-- **Never** call `IMessageSession` from Application — use `IMessagingService`.
-- `[RequiresTransactionalSession]` for transactional consistency.
-- Known error → `LogWarning` + return. Unknown → throw (triggers retry).
 
 ### Refit & HTTP Clients
 
-- WFE → BFF: Refit in `Presentation/Shared/ServiceClients/Bff/Clients/`. Requires `apiVersion` param + `CancellationToken`.
-- BFF → Api: `IApiClient` via `AddNihdiHttpServiceClient`.
-- Feature Services: `Presentation/<Feature>/Services/` — wrap Refit, `catch ApiException → ConvertApiExceptionToResult<T>()`.
+- WASM → Client: Refit interfaces in `Presentation/Shared/ServiceClients/Bff/`. Every method needs `CancellationToken`.
+- Registered via `BffServiceClients.AddBffServiceClients()` using `AddRefitClientWithCookies<T>()`.
+- `CookieHandler` ensures `credentials: include` + XSRF on every call.
+- Feature Services: `Presentation/<Feature>/Services/` — wrap Refit client, map DTO→Model.
 
 ### Blazor ViewModel Lifecycle
 
 `IsBusy` guard + `InitializeAsync(IErrorComponent)`. Page injects `IViewModel`, calls in `OnInitializedAsync`.
 Error → `try/catch → errorComponent.ProcessError(ex)`. Set `IsBusy = true` before async, `false` in `finally`.
 
-### Hangfire
-
-`IBackgroundRecurringTask` in `Host/Worker/BackgroundRecurringTask/`. BFF hosts dashboard; Worker runs jobs. Shared SQL storage.
-
 ---
 
-## New Feature Workflow
+## New Feature Workflow — Vertical Slices
 
 Before starting, identify a **reference feature** in the codebase — the existing feature whose patterns you will follow. If no reference feature has been specified by the user or in the spec, **ask the user which existing feature to use**. Study it across all layers first. Each step = one Red-Green-Refactor cycle with **🛑 HUMAN GATE**.
 
-| Step | Layer | Test | Production |
-|------|-------|------|------------|
-| 1 | `Core/Domain/` | `Test/Unit/Domain/` — construction | Entity : `IEntity` |
-| 2 | `Core/Application` + `Persistence` | `Test/Unit/Application/` — handler (mock repo) | `IMyRepo` + `MyRepo : BaseRepository<T>` |
-| 3 | `Core/Application/Functionalities/` | `Test/Unit/Application/` — command/query | Handler + Query |
-| 4 | `Contracts/` | DTO shape/mapping test | `record` DTOs |
-| 5 | `Host/Bff/Controllers/` | `Test/Bff/Features/` — Reqnroll `.feature` + step def | Controller (`Result<T>` → HTTP status) |
-| 6 | `Database/Tables/` | _(covered by step 5)_ | SQL `CREATE TABLE` — **user deploys via Schema Compare** |
-| 7 | `Presentation/` | Manual UI test | Pages, ViewModels, Services, Refit clients |
+**Plan by behavior, not by layer.** Each step delivers a thin, end-to-end slice of user-visible functionality that may cross multiple layers (Domain, Application, Persistence, Contracts, Controller, Database, Presentation). Name steps by what the user or system can do after the step — not by which layer is created.
 
----
+### Layer reference (what exists — not the step order)
 
-## AppSettings Layering
+| Layer | Purpose |
+|-------|--------|
+| `Core/Domain/` | Entities : `IEntity`, value objects, plain C# |
+| `Core/Application/` + `Persistence/` | Handlers, Queries, Repos (`BaseRepository<T>`) |
+| `Contracts/` | `record` DTOs |
+| `Host/Client/Controllers/` | REST API (`Result<T>` → HTTP status) |
+| `Presentation/` | Pages, ViewModels, Services, Refit clients |
 
-`appsettings.json` → `*.Development.json` → `*.UnitTest.json` → `*.UnitTest.Development.json` (gitignored) → env vars.
-Required block: `Nihdi.Application` with `BusinessSystemName`, `SubSystemName`, `SubSystemType`, `Environment`.
-**No secrets in committed files. No `appsettings.TST/PRD.json`.**
+### Example — vertical slice steps
+
+1. **Display the list** — read-only flow across all layers from DB → API → UI.
+2. **Retrieve detail and edit fields** — detail view, edit form, all layers.
+3. **Validate on Save** — business rules in handler, error display in UI.
+4. **Persist changes** — save to DB, confirmation feedback.
 
 ---
 
 <anti_patterns>
 ## Anti-Patterns
 
-| Don’t | Do instead |
+| Don't | Do instead |
 |-------|------------|
 | `services.AddScoped<T>` in Program.cs | `*Module` + suffix auto-registration |
 | Throw for validation errors | Return `Result<T>` |
 | EF attributes on domain entities | `IEntityTypeConfiguration<T>` in Persistence |
 | `IMessageSession` in Application | `IMessagingService` abstraction |
-| Manual logging/security setup | `Nihdi.Core.Configuration` handles it |
 | Service without interface | Scrutor needs `I<Name>` to register |
 | Skip `CancellationToken` | Propagate on every async call |
 | Multiple plan steps per reply | One step → stop at HUMAN GATE |
@@ -279,16 +260,17 @@ Before answering questions about the codebase, read the relevant files first. Ne
 ## Commands
 
 ```powershell
-dotnet build src/{{SolutionName}}.sln                                                          # Build
-dotnet restore src/{{SolutionName}}.sln                                                       # Restore (NuGet sources configured at user level)
-{{TestExePath}}                       # Unit tests (dotnet test unsupported — MTP + .NET 10)
-{{TestExePath}} --filter "<Class>"   # Filtered
-dotnet format src/{{SolutionName}}.sln --verify-no-changes                                    # Format check
+dotnet build src/MySolutionName.sln                # Build
+dotnet restore src/MySolutionName.sln              # Restore (NuGet sources configured at user level)
+dotnet test --project src/Test/Unit/                 # Unit tests
+dotnet test --project src/Test/Integration/          # Integration tests
+dotnet test --project src/Test/UI/                   # bUnit component tests
+dotnet test --project src/Test/Unit/ --filter "<Class>" # Filtered
+dotnet format src/MySolutionName.sln --verify-no-changes  # Format check
 ```
 
 ## Conventions
 
-- No `.sqlproj` changes — DB changes via SQL files only.
 - `protected Program() {}` in every host.
 - Commit format: `<type>(<scope>): <desc>`.
 - Build + test + format before push.

@@ -6,6 +6,8 @@ argument-hint: "Describe the page, e.g. 'list page for prescriptions with search
 
 # Add Blazor Page — Presentation Layer
 
+> **Scope: Blazor WASM + Client (BFF).** This skill is for the Blazor WASM project where the Presentation RCL calls the Client host API via Refit (`BffServiceClients.AddBffServiceClients()` / `CookieHandler`). For standalone WASM apps with direct `HttpClient` services (no Client host), use the **`/add-blazor-module`** skill instead.
+
 Add a new Blazor page with ViewModel, ServiceClient, and Refit integration. UI uses **MudBlazor** components and **IStringLocalizer** for localization.
 
 ## File Inventory (per page)
@@ -432,11 +434,13 @@ Reference in code: `@Localizer[nameof(Resources.<Feature>.<Feature>.KeyName)]`
 - [ ] ViewModel implements `IViewModel` with `InitializeAsync(IErrorComponent)`
 - [ ] `IsBusy` guard on all async operations
 - [ ] `try/catch → errorComponent.ProcessError(ex)` in ViewModel
-- [ ] ServiceClient catches `ApiException → ConvertApiExceptionToResult<T>()`
-- [ ] Refit client includes `apiVersion` + `CancellationToken`
+- [ ] Service Client catches `ApiException → ConvertApiExceptionToResult<T>()`
+- [ ] Refit Client includes `apiVersion` + `CancellationToken`
 - [ ] `[CascadingParameter] Error` on all pages
 - [ ] `[Inject]` for ViewModel, DialogService, Localizer
 - [ ] MudBlazor components (not raw HTML)
 - [ ] Localization via `IStringLocalizer`
 - [ ] Dialog uses `IMudDialogInstance` + `MudDialog.Close(DialogResult.Ok(...))`
 - [ ] Copyright header on all new `.cs` files
+
+

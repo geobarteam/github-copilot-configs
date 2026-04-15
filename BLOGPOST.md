@@ -1,6 +1,8 @@
 # From Vibe Coding to Spec-Driven Development: Best Practices for AI-Assisted Coding with GitHub Copilot
 
-*How NIHDI standardises AI coding guidance across teams — and how you can do the same.*
+*How to standardise AI coding guidance across teams — and how you can do the same.*
+
+> **Part 1 of 2.** This article covers best practices and the copilot-sync template system. For a hands-on walkthrough of the spec-driven process, see [Part 2: The Process in Action](BLOGPOST-PROCESS.md).
 
 ---
 
@@ -8,7 +10,7 @@
 
 AI coding assistants like GitHub Copilot are changing how developers write software. But without clear practices, teams drift into what we call **vibe coding** — letting the AI generate code with no plan, no verification, and no accountability. The result? Code nobody fully understands.
 
-This article distils best practices we developed at NIHDI for using GitHub Copilot effectively, and explains how we built a centralised template system — **Nihdi.Copilot.Sync** — to propagate these practices across every project in the organisation.
+This article distils best practices for using GitHub Copilot effectively, and explains how to build a centralised template system — **copilot-sync** — to propagate these practices across every project in an organisation.
 
 ---
 
@@ -109,7 +111,7 @@ The pattern is always the same: scope the task, reference existing patterns, and
 
 ## Part 2: Scaling Best Practices with Centralised AI Templates
 
-Knowing best practices is one thing. Making sure every project in the organisation follows them is another. At NIHDI, we solved this with **Nihdi.Copilot.Sync** — a tool that centrally authors and distributes GitHub Copilot customisation files across all team projects.
+Knowing best practices is one thing. Making sure every project in the organisation follows them is another. We solved this with **copilot-sync** — a tool that centrally authors and distributes GitHub Copilot customisation files across all team projects.
 
 ### The Problem
 
@@ -123,12 +125,12 @@ Without centralisation, each team maintains its own copy. Problems quickly emerg
 
 ### The Solution: A Template Package + CLI Tool
 
-Nihdi.Copilot.Sync is a dual-package .NET solution:
+Copilot-sync is a dual-package .NET solution:
 
 | Package | Role |
 |---------|------|
-| **Nihdi.Copilot.Customizations** | NuGet content package — embeds tokenised `.github/` template files as assembly resources |
-| **Nihdi.Copilot.Sync** | `dotnet tool` CLI — reads project config, replaces tokens, syncs files to the target repo |
+| **Copilot.Customizations** | NuGet content package — embeds tokenised `.github/` template files as assembly resources |
+| **copilot-sync** | `dotnet tool` CLI — reads project config, replaces tokens, syncs files to the target repo |
 
 The core idea: **author templates once, distribute everywhere, customise per project via tokens**.
 
@@ -191,11 +193,11 @@ Templates use `{{MustacheStyle}}` placeholders that get replaced with project-sp
 | Token | Example |
 |-------|---------|
 | `{{SolutionName}}` | `FindMyDoctor` |
-| `{{NamespaceRoot}}` | `Nihdi.FindMyDoctor` |
+| `{{NamespaceRoot}}` | `Contoso.FindMyDoctor` |
 | `{{DbContextName}}` | `FindMyDoctorDbContext` |
-| `{{TestExePath}}` | `.\src\Test\Unit\bin\Debug\net10.0\Nihdi.FindMyDoctor.Unit.Tests.exe` |
-| `{{SonarProjectKey}}` | `nihdi-find-my-doctor` |
-| `{{SonarServerUrl}}` | `https://sonarcube-sp01.riziv.dcs` |
+| `{{TestExePath}}` | `.\src\Test\Unit\bin\Debug\net10.0\Contoso.FindMyDoctor.Unit.Tests.exe` |
+| `{{SonarProjectKey}}` | `contoso-find-my-doctor` |
+| `{{SonarServerUrl}}` | `https://sonarqube.example.com` |
 
 **Derived tokens** are computed automatically — solution file names, project file paths, and other values that follow naming conventions.
 
@@ -211,8 +213,8 @@ Becomes, after sync:
 
 ```markdown
 # Copilot Instructions — FindMyDoctor
-Run tests: .\src\Test\Unit\bin\Debug\net10.0\Nihdi.FindMyDoctor.Unit.Tests.exe
-Namespace: Nihdi.FindMyDoctor
+Run tests: .\src\Test\Unit\bin\Debug\net10.0\Contoso.FindMyDoctor.Unit.Tests.exe
+Namespace: Contoso.FindMyDoctor
 ```
 
 ### The CLI Workflow
@@ -264,7 +266,7 @@ Each consumer project commits a single `.copilotrc.json`:
   "template": "BlazorServer-3Tier",
   "tokens": {
     "SolutionName": "FindMyDoctor",
-    "NamespaceRoot": "Nihdi.FindMyDoctor",
+    "NamespaceRoot": "Contoso.FindMyDoctor",
     "DbContextName": "FindMyDoctorDbContext"
   },
   "overrides": [
@@ -538,4 +540,6 @@ The tooling doesn't have to be complex. What matters is the commitment to treati
 
 ---
 
-*This article is based on the CT-Platform Guidance deck by Geoffrey Vandiest (NIHDI, 2026) and the [Nihdi.Copilot.Sync](https://github.com/nickaerts/nihdi-copilot-sync) open-source project.*
+*This article describes practices encoded in the [copilot-sync](https://github.com/nickaerts/copilot-sync) open-source project, which distributes AI coding instructions as versioned templates across .NET projects.*
+
+> **Next:** [Part 2 — Spec-Driven Development: The Process in Action](BLOGPOST-PROCESS.md)

@@ -1,16 +1,18 @@
 ---
-description: "Use when creating, modifying, or reviewing Refit HTTP service clients, feature services, or the CookieHandler/XSRF pipeline. Covers the WASM → Cfe BFF client pattern, DTO mapping, and registration conventions."
+description: "Use when creating, modifying, or reviewing Refit HTTP service clients, feature services, or the CookieHandler/XSRF pipeline in Blazor WASM projects. Covers the WASM → Cfe BFF client pattern, DTO mapping, and registration conventions. This is the Blazor WASM template — Blazor Server projects use a different pattern (typed Refit client registration / BffClientConfigurator / UserContextHeaderHandler) documented in the add-blazor-page and add-endpoint skills."
 applyTo: "src/Presentation/**/ServiceClients/**,src/Presentation/**/Services/**,src/Infrastructure/Http/**"
 ---
 # Refit + BFF Client Pattern — {{SolutionName}}Wasm
 
+> **Template scope: Blazor WASM.** This instruction file covers the WASM client pattern (`CookieHandler` + `IAntiforgeryTokenStore` + `AddRefitClientWithCookies`). Blazor Server projects use a different registration pattern — see the `/add-blazor-page` and `/add-endpoint` skills for that variant.
+
 ## Architecture
 
 ```
-Razor Page → ViewModel → IFeatureService → IFeatureServiceClient (Refit) → CookieHandler → Cfe API
+Razor Page → ViewModel → IFeatureService → IFeatureServiceClient (Refit) → CookieHandler → Client API
 ```
 
-- **Refit interfaces** call the Cfe API controllers.
+- **Refit interfaces** call the Client API controllers.
 - **CookieHandler** attaches the session cookie (`credentials: include`) and `X-XSRF-TOKEN` header on mutating requests.
 - **Feature Services** wrap the Refit client, map `DTO → Model`, and return `Result<T>` for error handling.
 
@@ -29,9 +31,9 @@ Razor Page → ViewModel → IFeatureService → IFeatureServiceClient (Refit) �
 Reference: `IDoctorServiceClient.cs`
 
 ```csharp
-namespace {{NamespaceRoot}}Wasm.Presentation.Shared.ServiceClients.Bff;
+namespace {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff;
 
-using {{NamespaceRoot}}Wasm.Contracts.<Feature>;
+using {{NamespaceRoot}}.Contracts.<Feature>;
 using Refit;
 
 public interface I<Feature>ServiceClient
@@ -88,12 +90,12 @@ The token is populated by `BffAuthenticationStateProvider` from the Cfe's user e
 Reference: `DoctorsService.cs`
 
 ```csharp
-namespace {{NamespaceRoot}}Wasm.Presentation.<Feature>.Services;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.Services;
 
-using Nihdi.Core.Functional;
-using {{NamespaceRoot}}Wasm.Contracts.<Feature>;
-using {{NamespaceRoot}}Wasm.Presentation.<Feature>.Models;
-using {{NamespaceRoot}}Wasm.Presentation.Shared.ServiceClients.Bff;
+using {{NamespaceRoot}}.Core.Functional;
+using {{NamespaceRoot}}.Contracts.<Feature>;
+using {{NamespaceRoot}}.Presentation.<Feature>.Models;
+using {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff;
 
 public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Service
 {
@@ -116,7 +118,7 @@ public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Servic
 
 - Constructor-inject the Refit interface. Use primary constructor syntax.
 - Map DTO → Model in the service. ViewModels never see DTOs.
-- Return `Result<T>` (from `Nihdi.Core.Functional`) for operations that can fail with business errors.
+- Return `Result<T>` for operations that can fail with business errors.
 - Return plain collections for read operations.
 - **No registration needed** — Scrutor auto-registers classes ending in `Service` as transient via `PresentationModule`.
 
@@ -125,7 +127,7 @@ public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Servic
 Models are plain C# classes or records in `Presentation/<Feature>/Models/`. They are the UI-facing representation — no framework dependencies.
 
 ```csharp
-namespace {{NamespaceRoot}}Wasm.Presentation.<Feature>.Models;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.Models;
 
 public class <Feature>Model
 {

@@ -1,87 +1,139 @@
 ---
-description: "Layer guidance for BFF controllers, NServiceBus handlers, and API conventions. Covers Result<T> to HTTP mapping, audit logging, RequiresTransactionalSession, and route patterns. Activates when editing BFF host files."
-applyTo: "src/Host/BFF/**"
+description: "Layer guidance for API controllers. Covers controller action patterns, Result<T> to HTTP mapping, audit logging (IAuditLogger/GdprAuditLog), correlation IDs, user context, and NServiceBus transactional session usage. Activates when editing API controller files."
+applyTo: "src/Host/Client/**"
 ---
-# BFF Controller & Handler Conventions
+# API Controller Conventions
 
-## Controller Pattern
+## Controller Structure
+
+Location: `src/Host/Client/Controllers/<Feature>Controller.cs`
+
+Controllers are thin — they delegate to Application queries/commands and map results to HTTP.
+
+### Standard Dependencies
 
 ```csharp
-namespace {{NamespaceRoot}}.Host.Bff.Controllers;
-
 [ApiController]
 [Route("api/[controller]")]
 public class <Feature>Controller(
-    IGet<Entity>Query get<Entity>Query,
-    I<Entity><Action>Handler <entity><Action>Handler,
-    IAuditLogger auditLogger) : ControllerBase
+    IGet<Entity>Query getQuery,
+    I<Action><Entity>CommandHandler commandHandler,
+    IAuditLogger auditLogger,
+    ICorrelationContextAccessor correlationContextAccessor,
+    IUserContextAccessor userContextAccessor,
+    ILogger<<Feature>Controller> logger) : ControllerBase
 {
-    /// <summary>Get all entities.</summary>
-    [HttpGet]
-    [ProducesResponseType(typeof(List<<Entity>Dto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    // ...
+}
+```
+
+## GET Action (Query)
+
+```csharp
+[HttpGet("{id}")]
+public async Task<ActionResult<<Entity>DetailDto>> GetById(
+    [FromRoute] int id, CancellationToken cancellationToken)
+{
+    try
     {
-        await auditLogger.LogMessageAsync("<Entity> list requested");
-        var result = await get<Entity>Query.Execute(ct);
-        return Ok(result);
+        var entity = await _getByIdQuery.Execute(id);
+        if (entity is null) return NotFound();
+
+        var correlationId = _correlationContextAccessor?.Current?.CorrelationId
+            ?? Guid.NewGuid().ToString();
+        await _auditLogger.LogMessageAsync(
+            new GdprAuditLog(
+                entity.Name,
+                _userContextAccessor?.Current?.UserId,
+                _userContextAccessor?.Current?.UserName,
+                "Get <entity> by id",
+                AuditAction.Read,
+                AuditActionStatus.Succeeded,
+                correlationId),
+            cancellationToken);
+
+        return Ok(new <Entity>DetailDto(entity.Id, entity.Name));
     }
-
-    /// <summary>Create a new entity.</summary>
-    [HttpPost]
-    [RequiresTransactionalSession]  // Required when publishing NServiceBus events
-    [ProducesResponseType(typeof(<Entity>Dto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] <Entity><Action>Command command, CancellationToken ct)
+    catch (Exception ex)
     {
-        await auditLogger.LogActionAsync("<Entity> creation requested");
-        var result = await <entity><Action>Handler.Execute(command, ct);
-        if (!result.IsSuccess)
-            return BadRequest(result.Error);
-
-        return Ok(result.Value);
+        _logger.LogError(ex, "{Controller} has thrown an exception.", nameof(<Feature>Controller));
+        throw;
     }
 }
 ```
+
+## POST/PUT/DELETE Action (Command)
+
+```csharp
+[HttpPost]
+public async Task<ActionResult> Create(
+    [FromBody] <Action><Entity>Dto dto, CancellationToken cancellationToken)
+{
+    try
+    {
+        var result = await _auditLogger.LogActionAsync<Unit>(
+            new GdprAuditLog(
+                dto.Name,
+                _userContextAccessor?.Current?.UserId,
+                _userContextAccessor?.Current?.UserName,
+                "<Action> <entity>",
+                AuditAction.Create,
+                AuditActionStatus.Initiated,
+                _correlationContextAccessor?.Current?.CorrelationId
+                    ?? Guid.NewGuid().ToString()),
+            async () => await _commandHandler.Execute(
+                new <Action><Entity>Command(dto.Name, dto.Email)),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(result.Error);
+        return Ok();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "{Controller} has thrown an exception.", nameof(<Feature>Controller));
+        throw;
+    }
+}
+```
+
+## NServiceBus Transactional Session
+
+For commands that publish NServiceBus events within a DB transaction:
+
+```csharp
+[HttpPost]
+[RequiresTransactionalSession]
+public async Task<ActionResult> Register(
+    [FromBody] Register<Entity>Dto dto, CancellationToken cancellationToken)
+{
+    // Same pattern as above — the [RequiresTransactionalSession] attribute
+    // ensures the NServiceBus outbox is committed with the DB transaction.
+}
+```
+
+## Result\<T\> → HTTP Mapping
+
+| `Result<T>` state | HTTP response |
+|--------------------|---------------|
+| `IsSuccess` with value | `Ok(value)` |
+| `IsSuccess` without value | `Ok()` |
+| `!IsSuccess` | `BadRequest(result.Error)` |
+| Entity not found | `NotFound()` |
 
 ## Rules
 
-- **Result<T> → HTTP**: `result.IsSuccess` → `Ok()` / `!result.IsSuccess` → `BadRequest(result.Error)`.
-- **Routes**: `kebab-case` — `[Route("api/my-feature")]`.
-- **Audit logging**: `IAuditLogger.LogMessageAsync()` for reads, `IAuditLogger.LogActionAsync()` for writes.
-- **`[RequiresTransactionalSession]`** on any action that publishes NServiceBus events.
-- **`CancellationToken`** on every action method.
-- `[ProducesResponseType]` on every action.
+- Controllers are **thin** — no business logic, no direct DB access.
+- Every action includes **audit logging** via `IAuditLogger` + `GdprAuditLog`.
+- Correlation ID from `ICorrelationContextAccessor` (fallback to `Guid.NewGuid()`).
+- User context from `IUserContextAccessor` for GDPR audit trail.
+- **CancellationToken** on every action as the last parameter.
+- Log exceptions with structured logging (`{Controller}` placeholder).
+- DTOs live in `Contracts/<Feature>/Api/` — not in the Host project.
 
-## NServiceBus Handlers (BFF)
+## Forbidden
 
-Location: `src/Host/BFF/NServiceBusHandlers/`
-
-```csharp
-namespace {{NamespaceRoot}}.Host.Bff.NServiceBusHandlers;
-
-public class <Entity>MessageHandler(
-    I<Entity><Action>Handler handler,
-    ILogger<<Entity>MessageHandler> logger) : IHandleMessages<<Entity>Message>
-{
-    public async Task Handle(<Entity>Message message, IMessageHandlerContext context)
-    {
-        // Known error → log warning + return (no retry)
-        // Unknown error → log + throw (triggers NServiceBus retry)
-        try
-        {
-            var command = new <Entity><Action>Command(message.Id);
-            var result = await handler.Execute(command, context.CancellationToken);
-            if (!result.IsSuccess)
-            {
-                logger.LogWarning("Known error: {Error}", result.Error);
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Unexpected error handling {Message}.", nameof(<Entity>Message));
-            throw;
-        }
-    }
-}
-```
+- Business logic in controllers (move to Application handlers).
+- Direct `DbContext` usage (use Application queries/commands).
+- Creating `HttpClient` instances (use Refit clients in Presentation).
+- Returning domain entities directly (map to DTOs).

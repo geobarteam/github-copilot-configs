@@ -1,5 +1,5 @@
 ---
-description: "Use when reviewing code quality, checking SonarQube issues, or running a static analysis scan for {{SolutionName}}. Runs dotnet-sonarscanner against the NIHDI SonarQube server and reports findings grouped by severity."
+description: "Use when reviewing code quality, checking SonarQube issues, or running a static analysis scan for {{SolutionName}}. Runs dotnet-sonarscanner against the configured SonarQube server and reports findings grouped by severity."
 name: "Sonar Review"
 tools: [execute, read, search, todo]
 argument-hint: "File path or feature name to review, or 'full' for the whole solution."

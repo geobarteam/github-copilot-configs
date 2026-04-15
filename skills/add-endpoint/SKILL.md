@@ -80,7 +80,7 @@ public record <Entity>DetailDto(int Id, string Name, ...);
 
 ### 4. Controller Action
 
-Add to existing controller in `src/Host/BFF/Controllers/`:
+Add to existing controller in `src/Host/Client/Controllers/`:
 
 ```csharp
 [HttpGet("{id}")]
@@ -130,36 +130,25 @@ Task<<Entity>DetailDto> Get<Entity>ByIdAsync(
 
 ### 6. Register the Refit Client (only for new client interfaces)
 
-If you created a **new** `I<Feature>Client.cs` interface (not just added a method to an existing one), register it in `BffClientConfigurator`.
+If you created a **new** `I<Feature>ServiceClient.cs` interface (not just added a method to an existing one), register it in `BffServiceClients`.
 
-**How Refit/HttpClient DI works in this project:**
-
-```
-appsettings.json
-  └─ Nihdi.HttpClientServiceRegistry.{{SolutionName}}-bff  (BaseAddress, AddClientAccessToken, TimeoutInSeconds)
-       └─ HttpClientServicesNames.{{SolutionName}}BFF = "{{SolutionName}}-bff"
-            └─ ConfigurePresentationServices.Configure{{SolutionName}}PresentationServices()
-                 └─ BffClientConfigurator.ConfigureBffServiceClient()
-                      └─ services.AddNihdiRefitClient<I<Feature>Client>(httpServiceConfiguration, ConfigureDefaultHeaders)
-                           └─ AddNihdiHttpServiceClient + RestService.For<T>(httpClient, DefaultRefitSettings)
-                           └─ UserContextHeaderHandler (adds user context headers for audit/GDPR)
-```
-
-Add one line in `src/Presentation/Shared/ServiceClients/Bff/BffClientConfigurator.cs` → `ConfigureBffServiceClient()`:
+Add one line in `src/Presentation/Shared/ServiceClients/Bff/BffServiceClients.cs` → `AddBffServiceClients()`:
 
 ```csharp
-services.AddNihdiRefitClient<I<Feature>Client>(httpServiceConfiguration, ConfigureDefaultHeaders);
+services.AddRefitClientWithCookies<I<Feature>ServiceClient>(baseAddress);
 ```
 
-**Do NOT** create your own `HttpClient` or call `AddRefitClient` directly — the `AddNihdiRefitClient<T>` helper handles:
-- Token management (`AddClientAccessToken` from config)
-- Base address resolution from `HttpClientServiceRegistry`
+The `AddRefitClientWithCookies<T>` method handles:
+- `CookieHandler` for session cookie (`credentials: include`) + XSRF
+- `PathBaseDelegatingHandler` for sub-path deployment
+- Base address resolution
 - `SystemTextJsonContentSerializer` with camelCase policy
-- `UserContextHeaderHandler` for audit/GDPR headers
+
+> See `refit-client.instructions.md` for full registration details and CookieHandler pipeline.
 
 ### 7. ServiceClient Method
 
-Add to `src/Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs`:
+Add to `src/Presentation/<Feature>/Services/<Feature>Service.cs`:
 
 ```csharp
 public async Task<<Entity>Model> GetByIdAsync(int id)
