@@ -185,9 +185,18 @@ Skills are invoked via `/name` in chat and guide the AI through multi-step code 
 | **`/add-dbup`** | Creates a DbUp migration script (CREATE TABLE, ALTER, seed data) |
 | **`/e2e-test`** | Full-stack browser testing with Playwright MCP |
 | **`/csharp-coding-standards`** | Reference-only C# coding standards and patterns |
-Specs and plans are created as project-level documentation at the repo root:
-- **`_specs/<Feature>.md`** — Feature specifications (the contract between developer and AI). Written before planning using `templates/spec-template.md`.
-- **`_plans/<Feature>.md`** — Implementation plans with vertical-slice steps, created by `@planner` from the spec.
+
+### Project-Level Documentation Folders
+
+Specs, plans, decisions, and QA artifacts are created as project-level documentation at the repo root:
+
+| Folder | Purpose | Committed to Git? |
+|--------|---------|-------------------|
+| **`_specs/`** | Feature specifications — the contract between developer and AI. Written using the `write-spec` prompt or manually from `templates/spec-template.md`. | No (developer-local) |
+| **`_plans/`** | Implementation plans with vertical-slice steps, created by `@planner` from the spec. | No (developer-local) |
+| **`_decisions/`** | Architecture Decision Records (ADRs) — significant design choices with context and trade-offs. Uses `templates/adr-template.md`. | **Yes** |
+| **`_qa/`** | QA artifacts — `Smoke-Test-Plan.md` and test reports. Referenced by `@smoke-test`. | **Yes** |
+| **`_infrastructure/`** | Azure Bicep IaC, `Architecture.md` (desired state), `Deployment-Info-{env}.md` (actual state). Referenced by `@devops`, `@debug`, `@smoke-test`. | **Yes** |
 ### Instructions — Auto-Activated Layer Conventions
 
 Instruction files activate automatically when you edit files matching their `applyTo` glob pattern. When you open a domain entity file, the AI silently loads domain conventions. When you edit a controller, it loads BFF patterns.

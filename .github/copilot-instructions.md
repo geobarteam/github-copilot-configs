@@ -28,6 +28,7 @@ Target projects: ASP.NET + Blazor + Worker solutions using Onion/Screaming Archi
 │   ├── git.agent.md              # GitFlow branching + .gitignore
 │   ├── planner.agent.md          # Feature plan creator
 │   ├── smoke-test.agent.md      # Post-deployment smoke testing (Playwright)
+│   └── sonar-review.agent.md    # SonarQube analysis (read-only)
 ├── instructions/
 │   ├── application-layer.instructions.md   # src/Core/Application/**
 │   ├── api-controller.instructions.md      # src/Host/Client/**
@@ -47,9 +48,11 @@ Target projects: ASP.NET + Blazor + Worker solutions using Onion/Screaming Archi
 │   ├── fix-violations/           # Fix StyleCop/Roslyn violations
 │   └── init/                     # Bootstrap workspace tokens + instructions
 ├── prompts/
-│   └── new-feature.prompt.md     # New feature spec + plan kickoff
+│   ├── new-feature.prompt.md     # New feature spec + plan kickoff
+│   └── write-spec.prompt.md      # AI interview → _specs/<Feature>.md
 └── templates/
-    └── spec-template.md          # Feature specification template
+    ├── spec-template.md          # Feature specification template
+    └── adr-template.md           # Architecture Decision Record template
 ```
 
 ---
