@@ -1,91 +1,124 @@
 ---
-description: "Layer guidance for Application commands, queries, and handlers. Covers CQRS-lite patterns, Result<T> error handling, repository interfaces, and handler conventions. Activates when editing Application layer files."
+description: "Layer guidance for Application commands, queries, handlers, and Result<T> pattern. Covers CQRS-lite conventions, IMessagingService usage, validation, and DI registration. Activates when editing Application layer files."
 applyTo: "src/Core/Application/**"
 ---
 # Application Layer Conventions
 
-## Commands
+## Query Pattern (Read)
 
-```csharp
-namespace MyApp.Core.Application.Functionalities.<Feature>.Commands.<Action>;
-
-public record <Entity><Action>Command(string Name, int DoctorId);
-```
-
-## Command Handlers
-
-```csharp
-public class <Entity><Action>Handler(
-    I<Entity>Repository <entity>Repository,
-    ILogger<<Entity><Action>Handler> logger) : ICommandHandler<<Entity><Action>Command, <Entity>Dto>
-{
-    public async Task<Result<<Entity>Dto>> Execute(<Entity><Action>Command command, CancellationToken ct)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(command.Name))
-                return Result<<Entity>Dto>.Failure("Name is required");
-
-            var entity = new <Entity> { Name = command.Name };
-            await <entity>Repository.AddAsync(entity, ct);
-            return Result<<Entity>Dto>.Success(new <Entity>Dto(entity.Id, entity.Name));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "{Handler} exception.", nameof(<Entity><Action>Handler));
-            throw;
-        }
-    }
-}
-```
-
-## Queries
+Location: `src/Core/Application/Functionalities/<Feature>/Queries/<Action>/`
 
 ```csharp
 // Interface
-namespace MyApp.Core.Application.Functionalities.<Feature>.Queries.<Action>;
+namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Queries.<Action>;
 
-public interface IGet<Entity>Query
+public interface IGet<Entity>By<Criteria>Query
 {
-    Task<List<<Entity>>> Execute(CancellationToken ct);
+    Task<<Entity>> Execute(<paramType> <param>);
 }
 
 // Implementation
-public class Get<Entity>Query(I<Entity>Repository <entity>Repository) : IGet<Entity>Query
+public class Get<Entity>By<Criteria>Query(I<Entity>Repository repository) : IGet<Entity>By<Criteria>Query
 {
-    public async Task<List<<Entity>>> Execute(CancellationToken ct)
+    private readonly I<Entity>Repository _repository = repository
+        ?? throw new ArgumentNullException(nameof(repository));
+
+    public async Task<<Entity>> Execute(<paramType> <param>)
+        => await _repository.GetBy<Criteria>(<param>);
+}
+```
+
+## Command + Handler Pattern (Write)
+
+Location: `src/Core/Application/Functionalities/<Feature>/Commands/<Action>/`
+
+```csharp
+// Command — record with Validate()
+public record <Action><Entity>Command(string Name, string Email)
+{
+    public (bool IsValid, List<string> Errors) Validate()
     {
-        return [.. await <entity>Repository.ListAllAsync(ct)];
+        var errors = new List<string>();
+        if (string.IsNullOrEmpty(Name)) errors.Add("Name cannot be empty");
+        return (!errors.Any(), errors);
+    }
+}
+
+// Handler — returns Result<Unit>
+public class <Action><Entity>CommandHandler(I<Entity>Repository repository)
+    : ICommandHandler<<Action><Entity>Command, Result<Unit>>
+{
+    private readonly I<Entity>Repository _repository = repository
+        ?? throw new ArgumentNullException(nameof(repository));
+
+    public async Task<Result<Unit>> Execute(<Action><Entity>Command command)
+    {
+        Result<Unit> validateResult = ValidateCommand(command);
+        if (!validateResult.IsSuccess)
+            return validateResult;
+
+        // Business logic
+        await _repository.SaveChangesAsync();
+        return new Result<Unit>(Unit.Default());
+    }
+
+    private static Result<Unit> ValidateCommand(<Action><Entity>Command command)
+    {
+        (bool isValid, List<string> errors) = command.Validate();
+        if (!isValid)
+        {
+            var sb = new StringBuilder();
+            errors.ForEach(err => sb.Append($"{err} {Environment.NewLine}"));
+            return new Result<Unit>(sb.ToString());
+        }
+        return new Result<Unit>(Unit.Default());
     }
 }
 ```
 
-## Repository Interfaces
+## Result\<T\> — Error Handling
+
+- Use `Result<T>` for all business errors — never throw for expected failures.
+- `Result<Unit>` for commands that return no data.
+- Check `result.IsSuccess` before accessing the value.
+- Map `Result<T>` to HTTP in the controller layer, not here.
+
+## IMessagingService — Async Messaging
+
+When a command needs to publish events or send messages:
 
 ```csharp
-namespace MyApp.Core.Application.Shared.Interfaces.Persistence.Repositories;
-
-public interface I<Entity>Repository : IRepository<<Entity>>
+public class Register<Entity>CommandHandler(
+    I<Entity>Repository repository,
+    IMessagingService messagingService)
+    : ICommandHandler<Register<Entity>Command, Result<Unit>>
 {
-    Task<IReadOnlyList<<Entity>>> GetBy<Criteria>Async(string value);
+    public async Task<Result<Unit>> Execute(Register<Entity>Command command)
+    {
+        // ... business logic ...
+        await _repository.SaveChangesAsync();
+
+        await _messagingService.PublishTransactional(
+            new <Entity>CreatedEvent(entity.Id, ...));
+
+        return new Result<Unit>(Unit.Default());
+    }
 }
 ```
 
 ## Rules
 
-- **Never throw for business errors** — return `Result<T>.Failure("message")`.
-- Unexpected exceptions: `logger.LogError(ex, ...)` then re-throw.
-- Validate inputs with `Preconditions.NotEmpty()` or guard clauses.
-- `CancellationToken` on every async method.
-- Application may reference Domain and Contracts only. **Never reference Persistence, Infrastructure, or Host.**
-- DI registration: `*Query` and `*Handler` are scoped (registered via `ApplicationModule` + Scrutor).
+- **DI**: auto-registered by `ApplicationModule` — suffix `Query` → Scoped, suffix `CommandHandler` → Scoped.
+- **No infrastructure concerns** — no EF, no HTTP. Only `IMessagingService` abstraction.
+- **Repository interfaces** live here (`I<Entity>Repository`), implementations live in Persistence.
+- **CancellationToken** on every async method signature.
+- **One query/command per file.** File matches class name.
+- Commands use `record` types with a `Validate()` method.
+- Queries return domain entities or DTOs; commands return `Result<Unit>`.
 
-## File Locations
+## Forbidden
 
-| Type | Path |
-|------|------|
-| Command | `Functionalities/<Feature>/Commands/<Action>/<Entity><Action>Command.cs` |
-| Handler | `Functionalities/<Feature>/Commands/<Action>/<Entity><Action>Handler.cs` |
-| Query interface | `Functionalities/<Feature>/Queries/<Action>/IGet<Entity>Query.cs` |
-| Query impl | `Functionalities/<Feature>/Queries/<Action>/Get<Entity>Query.cs` |
-| Repo interface | `Shared/Interfaces/Persistence/Repositories/I<Entity>Repository.cs` |
+- Throwing exceptions for business rule violations (use `Result<T>`).
+- Direct references to EF Core, `DbContext`, or any persistence types.
+- Direct references to `IMessageSession` or `ITransactionalSession` (use `IMessagingService`).
+- Controller or HTTP concerns (status codes, `ActionResult`).

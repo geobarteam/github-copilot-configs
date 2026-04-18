@@ -1,6 +1,6 @@
 ---
 name: build-feature
-description: "Use when implementing a new feature, vertical slice, or multi-layer change in {{SolutionName}} after a _plans/<FeatureName>.md (repo root) is approved. Provides step-by-step Red-Green-Refactor implementation procedure with real code templates for each layer: Domain entity, Application command/query/handler, Persistence repository, Contracts DTOs, BFF controller, Database SQL, Presentation ViewModel/ServiceClient/Refit. Use for: building new features, adding CRUD operations, implementing vertical slices, following the 7-step layer workflow."
+description: "Use when implementing a new feature, vertical slice, or multi-layer change in {{SolutionName}} after a _plans/<FeatureName>.md (repo root) is approved. Provides step-by-step Red-Green-Refactor implementation procedure with real code templates for each layer: Domain entity, Application command/query/handler, Persistence repository, Contracts DTOs, Controller, DbUp migration, Presentation ViewModel/ServiceClient/Refit. Use for: building new features, adding CRUD operations, implementing vertical slices, following the 7-step layer workflow."
 argument-hint: "Which plan step to implement, e.g. 'Step 1 — Domain entity'"
 ---
 
@@ -45,6 +45,8 @@ The plan file is a **living document**. Track progress using the HUMAN GATE chec
 10. MARK DONE — once the user approves, update `_plans/<FeatureName>.md`: change `[ ]` → `[x]` on this step's HUMAN GATE checkboxes
 ```
 
+> This workflow mirrors the canonical Red-Green-Refactor-Proof Loop defined in `AGENTS.md`. See `AGENTS.md` for the full rules and planning gate requirements.
+
 > **Note**: `dotnet test` is not supported — `Microsoft.Testing.Platform` + .NET 10 SDK requires running the test `.exe` directly. If packages are missing, run `dotnet restore src/{{SolutionName}}.sln --interactive` first.
 
 **Never batch steps. Never skip RED. Never skip CODE ANALYSIS. Never proceed past 🛑 without user confirmation.**
@@ -57,17 +59,9 @@ The plan file is a **living document**. Track progress using the HUMAN GATE chec
 
 Location: `src/Core/Domain/Shared/Entities/<Entity>.cs`
 
-```csharp
-namespace {{NamespaceRoot}}.Core.Domain.Shared.Entities;
+Plain C# class implementing `IEntity` (`int Id { get; set; }`). No EF attributes, no dependencies.
 
-public class <Entity> : IEntity
-{
-    public int Id { get; set; }
-    // Properties — plain C#, no EF attributes, no dependencies
-}
-```
-
-Interface: `src/Core/Domain/Shared/IEntity.cs` (already exists — `int Id { get; set; }`)
+> Full pattern: see `domain-entity.instructions.md`.
 
 Test: construction + property assignment.
 
@@ -75,146 +69,29 @@ Test: construction + property assignment.
 
 ### Step 2 — Repository Interface + Implementation
 
-**Interface** in `src/Core/Application/Shared/Interfaces/Persistence/Repositories/I<Entity>Repository.cs`:
+**Interface**: `src/Core/Application/Shared/Interfaces/Persistence/Repositories/I<Entity>Repository.cs` — extends `IRepository<<Entity>>` with feature-specific methods.
 
-```csharp
-namespace {{NamespaceRoot}}.Core.Application.Shared.Interfaces.Persistence.Repositories;
+**Implementation**: `src/Core/Persistence/Repositories/<Entity>Repository.cs` — extends `BaseRepository<<Entity>>`, uses `AsNoTracking()` for reads.
 
-public interface I<Entity>Repository : IRepository<<Entity>>
-{
-    // Feature-specific query methods
-    Task<IReadOnlyList<<Entity>>> Search<Entity>(string param1, string param2);
-}
-```
-
-**Implementation** in `src/Core/Persistence/Repositories/<Entity>Repository.cs`:
-
-```csharp
-namespace {{NamespaceRoot}}.Core.Persistence.Repositories;
-
-using Microsoft.EntityFrameworkCore;
-
-public class <Entity>Repository({{DbContextName}} dbContext)
-    : BaseRepository<<Entity>>(dbContext), I<Entity>Repository
-{
-    public async Task<IReadOnlyList<<Entity>>> Search<Entity>(string param1, string param2)
-    {
-        var query = dbContext.<Entities>.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(param1))
-            query = query.Where(e => e.Prop.Contains(param1));
-
-        return await query.AsNoTracking().ToListAsync();  // Always AsNoTracking for reads
-    }
-}
-```
-
-**EF Configuration** in `src/Core/Persistence/EntityTypeConfigurations/<Entity>Configuration.cs`:
-
-```csharp
-namespace {{NamespaceRoot}}.Core.Persistence.EntityTypeConfigurations;
-
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-
-public class <Entity>Configuration : IEntityTypeConfiguration<<Entity>>
-{
-    public void Configure(EntityTypeBuilder<<Entity>> builder)
-    {
-        builder.ToTable("<Entity>", schema: "<Schema>");
-        builder.HasKey(p => p.Id);
-        builder.Property(p => p.Name).IsRequired().HasMaxLength(50);
-        // No EF attributes on entity — all config here via fluent API
-    }
-}
-```
+**EF Configuration**: `src/Core/Persistence/EntityTypeConfigurations/<Entity>Configuration.cs` — `IEntityTypeConfiguration<<Entity>>` with fluent API (no EF attributes on entity).
 
 DI: auto-registered by `PersistenceModule` (suffix `Repository` → Scoped).
+
+> Full patterns: see `persistence-layer.instructions.md`.
 
 ---
 
 ### Step 3 — Command + Handler
 
-**Command** in `src/Core/Application/Functionalities/<Feature>/Commands/<Action>/Add<Entity>Command.cs`:
+**Command**: `src/Core/Application/Functionalities/<Feature>/Commands/<Action>/Add<Entity>Command.cs` — `record` with `Validate()` method returning `(bool IsValid, List<string> Errors)`.
 
-```csharp
-namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Commands.<Action>;
+**Handler**: same folder, `Add<Entity>CommandHandler.cs` — implements `ICommandHandler<Add<Entity>Command, Result<Unit>>`. Validates first, then persists. Returns `Result<Unit>`.
 
-public record Add<Entity>Command(string Name, string Email)
-{
-    public (bool IsValid, List<string> Errors) Validate()
-    {
-        var errors = new List<string>();
-        if (string.IsNullOrEmpty(Name)) errors.Add("Name cannot be empty");
-        return (!errors.Any(), errors);
-    }
-}
-```
+**Query**: `src/Core/Application/Functionalities/<Feature>/Queries/<Action>/` — interface `IGet<Entity>ListQuery` + implementation delegating to repository.
 
-**Handler** in same folder `Add<Entity>CommandHandler.cs`:
+DI: auto-registered by `ApplicationModule` (suffix `Handler` → Scoped, suffix `Query` → Scoped).
 
-```csharp
-namespace {{NamespaceRoot}}.Core.Application.Functionalities.<Feature>.Commands.<Action>;
-
-using MyApp.Core.Application.Shared.Interfaces.Persistence.Repositories;
-using MyApp.Core.Domain.Shared.Entities;
-
-public class Add<Entity>CommandHandler(I<Entity>Repository repository)
-    : ICommandHandler<Add<Entity>Command, Result<Unit>>
-{
-    private readonly I<Entity>Repository _repository = repository
-        ?? throw new ArgumentNullException(nameof(repository));
-
-    public async Task<Result<Unit>> Execute(Add<Entity>Command command)
-    {
-        Result<Unit> validateResult = ValidateCommand(command);
-        if (!validateResult.IsSuccess)
-            return validateResult;
-
-        var entity = new <Entity> { Name = command.Name };
-        await _repository.AddAsync(entity);
-        await _repository.SaveChangesAsync();
-
-        return new Result<Unit>(Unit.Default());
-    }
-
-    private static Result<Unit> ValidateCommand(Add<Entity>Command command)
-    {
-        (bool isValid, List<string> errors) = command.Validate();
-        if (!isValid)
-        {
-            var sb = new StringBuilder();
-            errors.ForEach(err => sb.Append($"{err} {Environment.NewLine}"));
-            return new Result<Unit>(sb.ToString());
-        }
-        return new Result<Unit>(Unit.Default());
-    }
-}
-```
-
-DI: auto-registered by `ApplicationModule` (suffix `Handler` → Scoped).
-
-**Query** in `src/Core/Application/Functionalities/<Feature>/Queries/<Action>/`:
-
-```csharp
-// Interface
-public interface IGet<Entity>ListQuery
-{
-    Task<List<<Entity>>> Execute(string param1, string param2);
-}
-
-// Implementation
-public class Get<Entity>ListQuery(I<Entity>Repository repository) : IGet<Entity>ListQuery
-{
-    private readonly I<Entity>Repository _repository = repository
-        ?? throw new ArgumentNullException(nameof(repository));
-
-    public async Task<List<<Entity>>> Execute(string param1, string param2)
-        => [.. await _repository.Search<Entity>(param1, param2)];
-}
-```
-
-DI: auto-registered by `ApplicationModule` (suffix `Query` → Scoped).
+> Full patterns: see `application-layer.instructions.md`.
 
 Test: mock `I<Entity>Repository`, verify handler returns `Result<Unit>` success/failure.
 
@@ -237,174 +114,49 @@ DTOs are `record` types. No logic. No domain dependencies.
 
 ---
 
-### Step 5 — BFF Controller
+### Step 5 — Controller
 
-Location: `src/Host/BFF/Controllers/<Feature>Controller.cs`:
+Location: `src/Host/Client/Controllers/<Feature>Controller.cs`
 
-```csharp
-namespace {{NamespaceRoot}}.Host.Bff.Controllers;
+`[ApiController]` with `[Route("api/<feature-kebab>")]`. Constructor-inject queries/commands, `IAuditLogger`, `ICorrelationContextAccessor`, `IUserContextAccessor`, `ILogger`.
 
-[ApiController]
-[Route("api/<feature-kebab>")]
-public class <Feature>Controller(
-    IGet<Entity>ListQuery getQuery,
-    ICommandHandler<Add<Entity>Command, Result<Unit>> addCommand,
-    ILogger<<Feature>Controller> logger,
-    IAuditLogger auditLogger,
-    ICorrelationContextAccessor correlationContextAccessor,
-    IUserContextAccessor userContextAccessor) : ControllerBase
-{
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<<Entity>Dto>>> Get(
-        CancellationToken cancellationToken,
-        [FromQuery] string name = null)
-    {
-        try
-        {
-            var entities = await getQuery.Execute(name, ...);
-            // Audit logging
-            return Ok(entities.Select(e => new <Entity>Dto(e.Id, e.Name, e.Email)));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "{Controller} has throw an exception.", nameof(<Feature>Controller));
-            throw;
-        }
-    }
+- GET: execute query → map to DTO → audit log → `Ok(dtos)`. Return `NotFound()` for null.
+- POST: execute command → `Result<T>` → `BadRequest(error)` or `Ok()`. Audit via `LogActionAsync`.
+- Every action: `CancellationToken` as last param, `try/catch` with structured logging.
 
-    [HttpPost]
-    public async Task<ActionResult> Add([FromBody] Add<Entity>Dto dto, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var result = await addCommand.Execute(new Add<Entity>Command(dto.Name, dto.Email));
-            if (!result.IsSuccess)
-                return BadRequest(result.Error);
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "{Controller} has throw an exception.", nameof(<Feature>Controller));
-            throw;
-        }
-    }
-}
-```
+> Full patterns (GET/POST/PUT/DELETE, audit logging): see `bff-controller.instructions.md`.
 
 Test: `Test/Integration/Endpoints/` — HTTP tests with `CustomWebApplicationFactory`.
 
 ---
 
-### Step 6 — Database SQL
+### Step 6 — Database Migration (DbUp)
 
-Location: `src/Database/Tables/<Entity>.sql`
+Create a new DbUp migration script using the `/add-dbup` skill. The script goes in `src/Database/Scripts/` with sequential numbering:
 
-```sql
-CREATE TABLE [<Schema>].[<Entity>] (
-    [Id]     INT           IDENTITY (1, 1) NOT NULL,
-    [Name]   VARCHAR (50)  NOT NULL,
-    -- Encrypted columns use: COLLATE Latin1_General_BIN2 ENCRYPTED WITH (...)
-    CONSTRAINT [PK_<Entity>] PRIMARY KEY CLUSTERED ([Id] ASC)
-);
+```
+src/Database/Scripts/<NNNN>_Create<Entity>Table.sql
 ```
 
-**User deploys via Schema Compare** — never modify `.sqlproj` directly.
+> Full patterns (naming, templates, idempotency, script rules): see `/add-dbup` skill.
+
+Ensure the EF Core `IEntityTypeConfiguration<T>` from Step 2 matches the SQL schema exactly (table name, column types, nullability, indexes).
 
 ---
 
 ### Step 7 — Presentation Layer
 
-**Refit Client** in `src/Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs`:
+**Refit Client**: `src/Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs` — Refit interface with `[Get]`/`[Post]` attributes, `apiVersion` + `CancellationToken` on every method. Register new interfaces in `BffServiceClients.AddBffServiceClients()`.
 
-```csharp
-namespace {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff.Clients;
-
-using Refit;
-
-public interface I<Feature>Client
-{
-    [Get("/api/<feature-kebab>")]
-    Task<ICollection<<Entity>Dto>> Get<Feature>Async(
-        [Query] string name = null,
-        [AliasAs("api-version")][Query] string apiVersion = null,
-        CancellationToken cancellationToken = default);
-
-    [Post("/api/<feature-kebab>")]
-    Task Add<Entity>Async(
-        [Body] Add<Entity>Dto dto,
-        [AliasAs("api-version")][Query] string apiVersion = null,
-        CancellationToken cancellationToken = default);
-}
-```
-
-**Feature ServiceClient** in `src/Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs`:
-
-```csharp
-namespace {{NamespaceRoot}}.Presentation.<Feature>.ServiceClients;
-
-using {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff;
-
-public class <Feature>ServiceClient(I<Feature>Client client) : I<Feature>ServiceClient
-{
-    private readonly I<Feature>Client _client = client
-        ?? throw new ArgumentNullException(nameof(client));
-
-    public async Task<IEnumerable<<Entity>Model>> GetAllAsync()
-    {
-        var items = await _client.Get<Feature>Async(null, ApiConstants.ApiVersion);
-        return items.Select(x => new <Entity>Model(x.Name, x.Email));
-    }
-
-    public async Task<Result<Unit>> AddAsync(string name, string email)
-    {
-        try
-        {
-            await _client.Add<Entity>Async(new Add<Entity>Dto(name, email), ApiConstants.ApiVersion);
-        }
-        catch (ApiException ex)
-        {
-            return ex.ConvertApiExceptionToResult<Unit>();
-        }
-        return new Result<Unit>(Unit.Default());
-    }
-}
-```
+**Feature ServiceClient**: `src/Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs` — wraps `I<Feature>Client`, maps DTO → Model, catches `ApiException` → `ConvertApiExceptionToResult<T>()`.
 
 DI: auto-registered by `PresentationModule` (suffix `ServiceClient` → Transient).
 
-**ViewModel** in `src/Presentation/<Feature>/ViewModels/<Feature>ViewModel.cs`:
-
-```csharp
-namespace {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
-
-public class <Feature>ViewModel(I<Feature>ServiceClient serviceClient) : I<Feature>ViewModel
-{
-    private readonly I<Feature>ServiceClient _serviceClient = serviceClient;
-
-    public bool IsBusy { get; set; }
-    public IList<<Entity>Model> Items { get; set; }
-
-    public async Task InitializeAsync(IErrorComponent errorComponent)
-    {
-        IsBusy = true;
-        try
-        {
-            var items = await _serviceClient.GetAllAsync();
-            Items = [.. items];
-        }
-        catch (Exception ex)
-        {
-            errorComponent.ProcessError(ex);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-}
-```
+**ViewModel**: `src/Presentation/<Feature>/ViewModels/<Feature>ViewModel.cs` — implements `I<Feature>ViewModel : IViewModel`. `IsBusy` guard, `InitializeAsync(IErrorComponent)`, `try/catch → errorComponent.ProcessError(ex)`.
 
 DI: auto-registered by `PresentationModule` (suffix `ViewModel` → Transient).
+
+> Full patterns (ViewModel lifecycle, ServiceClient mapping, Refit conventions, Razor pages, dialogs): see `blazor-presentation.instructions.md` and `/add-blazor-page` skill.
 
 ---
 
@@ -415,5 +167,6 @@ DI: auto-registered by `PresentationModule` (suffix `ViewModel` → Transient).
 - **Unit** — use `Unit.Default()` for void-equivalent returns.
 - **ApiException** — catch in ServiceClient, convert via `ex.ConvertApiExceptionToResult<T>()`.
 - **BaseRepository<T>** — provides `AddAsync`, `GetByIdAsync`, `ListAllAsync`, `Update`, `Delete`, `SaveChangesAsync`.
-- **DbSet registration** — add `DbSet<<Entity>>` to `AppDbContext`.
+- **DbSet registration** — add `DbSet<<Entity>>` to `{{DbContextName}}`.
+- **Copyright header** — all files need: `// <copyright file="<File>.cs" company="{{CompanyName}}"> ... </copyright>`
 - **CancellationToken** — propagate on every async call in controllers. Handlers may omit if not needed by repository.

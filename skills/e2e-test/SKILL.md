@@ -1,29 +1,28 @@
 ---
 name: e2e-test
-description: "Use when running end-to-end browser tests against the full MyApp stack (STS + BFF + WFE + Azurite). Provides the exact launch sequence, port map, health-check procedure, Playwright MCP navigation and assertion patterns, and teardown steps. Use for: smoke-testing a feature in the browser, verifying a page renders after implementation, checking auth flows, validating empty/populated states."
+description: "Use when running end-to-end browser tests against the full {{SolutionName}} stack (STS + BFF + Client + Azurite). Provides the exact launch sequence, port map, health-check procedure, Playwright MCP navigation and assertion patterns, and teardown steps. Use for: smoke-testing a feature in the browser, verifying a page renders after implementation, checking auth flows, validating empty/populated states."
 argument-hint: "Describe the scenario, e.g. 'verify /new-appointment page loads and shows doctor dropdown'"
 ---
 
 # E2E Test — Full-Stack Browser Testing Skill
 
-Run end-to-end browser tests against the running MyApp stack using the **Playwright MCP** tools.
+Run end-to-end browser tests against the running {{SolutionName}} stack using the **Playwright MCP** tools.
 
 ## Prerequisites
 
 - **Azurite** must be installed (`npm install -g azurite`)
-- **Playwright MCP** tools must be available (the `mcp_microsoft_pla_browser_*` tool family)
+- **Playwright MCP** tools must be available (the `mcp_microsoft_pla_browser_*` tool family). These tool names are specific to the Playwright MCP extension — if tool names change after an extension update, update this skill.
 - Solution must build successfully before launching
 
 ---
 
 ## 1 — Port Map
 
+> Ports are project-specific — read from `Properties/launchSettings.json` for each host project. The `/init` skill sets  `{{ClientPort}}`.
+
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **STS** | `https://localhost:5001` | OIDC test identity provider |
-| **BFF** | `https://localhost:7094` | Backend-for-Frontend API + Swagger |
-| **WFE** | `https://localhost:7259` | Blazor Server frontend (user-facing) |
-| **Azurite** | `localhost:10000-10002` | Azure Storage emulator (blob/queue/table) |
+| **Client** | `https://localhost:{{ClientPort}}` | Client + Swagger |
 
 ---
 
@@ -31,19 +30,9 @@ Run end-to-end browser tests against the running MyApp stack using the **Playwri
 
 Start services in this exact order. Each step must succeed before the next.
 
-### Step 2.1 — Azurite
-
-```powershell
-azurite --silent --location c:\azurite --debug c:\azurite\debug.log
-```
-
-Run as a **background** terminal process. Azurite is ready immediately (no health check needed).
-
-> Alternative (Docker): `docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`
-
 ### Step 2.2 — Build all hosts
 
-Use the VS Code task `build-all-hosts` (builds STS, BFF, WFE in parallel):
+Use the VS Code task `build-all-hosts` (builds STS, BFF, Client in parallel):
 
 ```
 run_task: build-all-hosts
@@ -55,52 +44,16 @@ Or via terminal:
 dotnet build src/{{SolutionName}}.sln
 ```
 
-### Step 2.3 — STS
+### Step 2.5 — Client
 
 ```powershell
-dotnet run --project src/STS/{{NamespaceRoot}}.STS.TestServer/{{NamespaceRoot}}.STS.TestServer.csproj
+dotnet run --project src/Host/Web/{{NamespaceRoot}}.Host.Client.csproj
 ```
 
-Run as **background**. Wait for the log line `Now listening on: https://localhost:5001`.
+Run as **background**. Wait for the log line `Now listening on: https://localhost:{{ClientPort}}`.
 
-**Health check**: Use `mcp_microsoft_pla_browser_navigate` to `https://localhost:5001/.well-known/openid-configuration` — expect a JSON response.
+**Health check**: Navigate to `https://localhost:{{ClientPort}}` — expect a redirect to STS login or the home page.
 
-### Step 2.4 — BFF
-
-```powershell
-dotnet run --project src/Host/BFF/{{NamespaceRoot}}.Host.Bff.csproj
-```
-
-Run as **background**. Wait for the log line `Now listening on: https://localhost:7094`.
-
-**Health check**: Navigate to `https://localhost:7094/swagger` — expect the Swagger UI page.
-
-### Step 2.5 — WFE
-
-```powershell
-dotnet run --project src/Host/Web/{{NamespaceRoot}}.Host.Wfe.csproj
-```
-
-Run as **background**. Wait for the log line `Now listening on: https://localhost:7259`.
-
-**Health check**: Navigate to `https://localhost:7259` — expect a redirect to STS login or the home page.
-
----
-
-## 3 — Authentication
-
-The STS TestServer auto-issues tokens for a hardcoded test user — **no interactive login is needed** in most configurations. When the browser navigates to the WFE, the OIDC flow redirects to the STS which immediately returns a token.
-
-**Test user claims:**
-
-| Claim | Value |
-|-------|-------|
-| `name` | `user@example.org` |
-| `email` | `user@example.org` |
-| `uid` | `123456789` |
-| `account_name` | `user101` |
-
-If the STS presents a login form, the credentials are pre-filled — just submit.
 
 ---
 
@@ -109,7 +62,7 @@ If the STS presents a login form, the credentials are pre-filled — just submit
 ### Navigate to a page
 
 ```
-mcp_microsoft_pla_browser_navigate → url: "https://localhost:7259/new-appointment"
+mcp_microsoft_pla_browser_navigate → url: "https://localhost:{{ClientPort}}/new-appointment"
 ```
 
 ### Wait for content to load
@@ -172,7 +125,7 @@ Each service launched as a background terminal returns a **terminal ID**. Use `g
 get_terminal_output → id: "<terminal-id-from-launch-step>"
 ```
 
-**Tip:** After navigating to a page, check both browser console (`mcp_microsoft_pla_browser_console_messages`) **and** server logs (`get_terminal_output` for BFF/WFE) to catch errors on both sides.
+**Tip:** After navigating to a page, check both browser console (`mcp_microsoft_pla_browser_console_messages`) **and** server logs (`get_terminal_output` for BFF/Client) to catch errors on both sides.
 
 To search for specific patterns in large log output, pipe through `Select-String`:
 
@@ -188,7 +141,7 @@ Select-String -Pattern "\[ERR\]|\[WRN\]|Exception" -InputObject $logContent
 ## 5 — E2E Test Workflow
 
 ```
-1. LAUNCH    — Start Azurite → Build → STS → BFF → WFE (Steps 2.1–2.5)
+1. LAUNCH    — Start Azurite → Build → STS → BFF → Client (Steps 2.1–2.5)
 2. NAVIGATE  — Open the target page in the browser
 3. AUTH      — Handle OIDC redirect if needed (STS auto-issues token)
 4. ASSERT    — Use snapshots and waits to verify expected content
@@ -200,7 +153,7 @@ Select-String -Pattern "\[ERR\]|\[WRN\]|Exception" -InputObject $logContent
 ### Example: Verify New Appointment page loads with doctor dropdown
 
 ```
-1. mcp_microsoft_pla_browser_navigate → "https://localhost:7259/new-appointment"
+1. mcp_microsoft_pla_browser_navigate → "https://localhost:{{ClientPort}}/new-appointment"
 2. mcp_microsoft_pla_browser_wait_for → "Select a doctor" (doctor dropdown placeholder)
 3. mcp_microsoft_pla_browser_snapshot → verify doctor dropdown, no date/time fields yet
 4. mcp_microsoft_pla_browser_console_messages → no errors
@@ -221,8 +174,6 @@ If launched via terminal, stop each background process by its terminal ID.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| OIDC redirect fails | STS not running | Start STS first, verify `https://localhost:5001/.well-known/openid-configuration` |
-| Swagger 500 error | Azurite not running | Start Azurite before BFF |
-| Blank page on WFE | BFF not running | Start BFF before WFE |
+| Blank page on Client | BFF not running | Start BFF before Client |
 | Certificate error | Dev cert not trusted | Run `dotnet dev-certs https --trust` |
 | Port in use | Previous instance still running | Kill the process or stop all terminals |

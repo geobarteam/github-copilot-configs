@@ -121,7 +121,8 @@ public class GetDoctorsTest : IDisposable
 
 ## Run Commands
 ```powershell
-dotnet test src/Test/Unit/                          # all unit tests
-dotnet test src/Test/Integration/                   # all integration tests
-dotnet test src/Test/Unit/ --filter GetDoctors      # filtered by class/method
+{{TestExePath}}                                     # all unit tests
+{{TestExePath}} --filter "GetDoctors"               # filtered by class/method
 ```
+
+> `dotnet test` is not supported — use the test `.exe` directly (`Microsoft.Testing.Platform` + .NET 10 SDK).

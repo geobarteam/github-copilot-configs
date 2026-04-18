@@ -1,52 +1,100 @@
 ---
-description: "Layer guidance for BFF controllers and API conventions. Covers Result<T> to HTTP mapping, audit logging, and route patterns. Activates when editing BFF host files."
-applyTo: "src/Host/BFF/**"
+description: "Layer guidance for API controllers. Covers controller action patterns, Result<T> to HTTP mapping, audit logging (IAuditLogger/GdprAuditLog), correlation IDs, user context. Activates when editing API controller files."
+applyTo: "src/Host/Client/**"
 ---
-# BFF Controller & Handler Conventions
+# API Controller Conventions
 
-## Controller Pattern
+## Controller Structure
+
+Location: `src/Host/Api/Controllers/<Feature>Controller.cs`
+
+Controllers are thin — they delegate to Application queries/commands and map results to HTTP.
+
+### Standard Dependencies
 
 ```csharp
-namespace MyApp.Host.Bff.Controllers;
-
 [ApiController]
 [Route("api/[controller]")]
 public class <Feature>Controller(
-    IGet<Entity>Query get<Entity>Query,
-    I<Entity><Action>Handler <entity><Action>Handler,
-    IAuditLogger auditLogger) : ControllerBase
+    IGet<Entity>Query getQuery,
+    I<Action><Entity>CommandHandler commandHandler,
+    IAuditLogger auditLogger,
+    ICorrelationContextAccessor correlationContextAccessor,
+    IUserContextAccessor userContextAccessor,
+    ILogger<<Feature>Controller> logger) : ControllerBase
 {
-    /// <summary>Get all entities.</summary>
-    [HttpGet]
-    [ProducesResponseType(typeof(List<<Entity>Dto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
-    {
-        await auditLogger.LogMessageAsync("<Entity> list requested");
-        var result = await get<Entity>Query.Execute(ct);
-        return Ok(result);
-    }
-
-    /// <summary>Create a new entity.</summary>
-    [HttpPost]
-    [ProducesResponseType(typeof(<Entity>Dto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] <Entity><Action>Command command, CancellationToken ct)
-    {
-        await auditLogger.LogActionAsync("<Entity> creation requested");
-        var result = await <entity><Action>Handler.Execute(command, ct);
-        if (!result.IsSuccess)
-            return BadRequest(result.Error);
-
-        return Ok(result.Value);
-    }
+    // ...
 }
 ```
 
+## GET Action (Query)
+
+```csharp
+ [HttpGet("{appointmentId}")]
+    public async Task<ActionResult<AppointmentDto>> GetAppointment([FromRoute] Guid salonId, [FromRoute] Guid appointmentId)
+    {
+        try
+        {
+            var result = await _getAppointmentQuery.Execute(appointmentId);
+            return result.Match<ActionResult<AppointmentDto>>(
+                appointment => appointment != null ? Ok(appointment.ToAppointmentDto()) : NotFound(),
+                error => StatusCode(500, $"Error retrieving appointment: {error.Message}")
+            );
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving appointment: {ex.Message}");
+        }
+    }
+```
+
+## POST/PUT/DELETE Action (Command)
+
+```csharp
+[HttpPut]
+public async Task<ActionResult<ResultDto<Unit>>> CreateAppointment(
+    [FromRoute] Guid salonId,
+    [FromBody] CreateDiaryAppointmentCommandDto commandDto)
+{
+    var userId = this.GetUserId();
+    if (userId == null)
+    {
+        return BadRequest("User not found");
+    }
+
+    var command = new CreateDiaryAppointmentCommand(
+        userId,
+        commandDto.Moment.ToDateTime(),
+        commandDto.ServiceId,
+        commandDto.TeamMemberId,
+        commandDto.Language,
+        commandDto.CustomerId,
+        commandDto.CustomerName);
+        
+    return (await _handler.Execute(command))
+        .Match(
+        result => Ok(new ResultDto<Unit>(Unit.Default)),
+        err => Ok(new ResultDto<Unit>(err.Select(n => n.Message).ToList())));
+}
+```
+
+## Result\<T\> → HTTP Mapping
+
+| `Result<T>` state | HTTP response |
+|--------------------|---------------|
+| `IsSuccess` with value | `Ok(value)` |
+| `IsSuccess` without value | `Ok()` |
+| `!IsSuccess` | `BadRequest(result.Error)` |
+| Entity not found | `NotFound()` |
+
 ## Rules
 
-- **Result<T> → HTTP**: `result.IsSuccess` → `Ok()` / `!result.IsSuccess` → `BadRequest(result.Error)`.
-- **Routes**: `kebab-case` — `[Route("api/my-feature")]`.
-- **Audit logging**: `IAuditLogger.LogMessageAsync()` for reads, `IAuditLogger.LogActionAsync()` for writes.
-- **`CancellationToken`** on every action method.
-- `[ProducesResponseType]` on every action.
+- Controllers are **thin** — no business logic, no direct DB access.
+- **CancellationToken** on every action as the last parameter.
 
+## Forbidden
+
+- Business logic in controllers (move to Application handlers).
+- Direct `DbContext` usage (use Application queries/commands).
+- Creating `HttpClient` instances (use Refit clients in Presentation).
+- Returning domain entities directly (map to DTOs).
