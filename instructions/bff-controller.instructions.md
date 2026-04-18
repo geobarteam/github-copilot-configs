@@ -30,70 +30,51 @@ public class <Feature>Controller(
 ## GET Action (Query)
 
 ```csharp
-[HttpGet("{id}")]
-public async Task<ActionResult<<Entity>DetailDto>> GetById(
-    [FromRoute] int id, CancellationToken cancellationToken)
-{
-    try
+ [HttpGet("{appointmentId}")]
+    public async Task<ActionResult<AppointmentDto>> GetAppointment([FromRoute] Guid salonId, [FromRoute] Guid appointmentId)
     {
-        var entity = await _getByIdQuery.Execute(id);
-        if (entity is null) return NotFound();
-
-        var correlationId = _correlationContextAccessor?.Current?.CorrelationId
-            ?? Guid.NewGuid().ToString();
-        await _auditLogger.LogMessageAsync(
-            new GdprAuditLog(
-                entity.Name,
-                _userContextAccessor?.Current?.UserId,
-                _userContextAccessor?.Current?.UserName,
-                "Get <entity> by id",
-                AuditAction.Read,
-                AuditActionStatus.Succeeded,
-                correlationId),
-            cancellationToken);
-
-        return Ok(new <Entity>DetailDto(entity.Id, entity.Name));
+        try
+        {
+            var result = await _getAppointmentQuery.Execute(appointmentId);
+            return result.Match<ActionResult<AppointmentDto>>(
+                appointment => appointment != null ? Ok(appointment.ToAppointmentDto()) : NotFound(),
+                error => StatusCode(500, $"Error retrieving appointment: {error.Message}")
+            );
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving appointment: {ex.Message}");
+        }
     }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "{Controller} has thrown an exception.", nameof(<Feature>Controller));
-        throw;
-    }
-}
 ```
 
 ## POST/PUT/DELETE Action (Command)
 
 ```csharp
-[HttpPost]
-public async Task<ActionResult> Create(
-    [FromBody] <Action><Entity>Dto dto, CancellationToken cancellationToken)
+[HttpPut]
+public async Task<ActionResult<ResultDto<Unit>>> CreateAppointment(
+    [FromRoute] Guid salonId,
+    [FromBody] CreateDiaryAppointmentCommandDto commandDto)
 {
-    try
+    var userId = this.GetUserId();
+    if (userId == null)
     {
-        var result = await _auditLogger.LogActionAsync<Unit>(
-            new GdprAuditLog(
-                dto.Name,
-                _userContextAccessor?.Current?.UserId,
-                _userContextAccessor?.Current?.UserName,
-                "<Action> <entity>",
-                AuditAction.Create,
-                AuditActionStatus.Initiated,
-                _correlationContextAccessor?.Current?.CorrelationId
-                    ?? Guid.NewGuid().ToString()),
-            async () => await _commandHandler.Execute(
-                new <Action><Entity>Command(dto.Name, dto.Email)),
-            cancellationToken);
+        return BadRequest("User not found");
+    }
 
-        if (!result.IsSuccess)
-            return BadRequest(result.Error);
-        return Ok();
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "{Controller} has thrown an exception.", nameof(<Feature>Controller));
-        throw;
-    }
+    var command = new CreateDiaryAppointmentCommand(
+        userId,
+        commandDto.Moment.ToDateTime(),
+        commandDto.ServiceId,
+        commandDto.TeamMemberId,
+        commandDto.Language,
+        commandDto.CustomerId,
+        commandDto.CustomerName);
+        
+    return (await _handler.Execute(command))
+        .Match(
+        result => Ok(new ResultDto<Unit>(Unit.Default)),
+        err => Ok(new ResultDto<Unit>(err.Select(n => n.Message).ToList())));
 }
 ```
 
