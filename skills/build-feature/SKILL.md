@@ -132,19 +132,32 @@ Test: `Test/Integration/Endpoints/` — HTTP tests with `CustomWebApplicationFac
 
 ### Step 6 — Database Migration (DbUp)
 
-Create a new DbUp migration script using the `/add-dbup` skill. The script goes in `src/Database/Scripts/` with sequential numbering:
+Location: `src/Migrations/Sql/`
 
+**Naming convention**: `YYYYMMDDNN_{Description}.sql` where `NN` is a sequence number for the day (e.g., `2026041801_AddVatFields.sql`).
+
+**How it works**: SQL files in `Sql/` are embedded resources (`<EmbeddedResource Include="Sql\*.sql" />`). DbUp discovers them via `WithScriptsEmbeddedInAssembly()` and executes them **alphabetically by full resource name** (`saloon25_migrations.Sql.{filename}`). Each script runs in its own transaction (`WithTransactionPerScript`). A `SchemaVersions` journal table tracks which scripts have already run — only pending scripts execute.
+
+**Running migrations**:
+```powershell
+dotnet run --project src/Migrations/Salon25.Migrations.csproj
 ```
-src/Database/Scripts/<NNNN>_Create<Entity>Table.sql
+Default connection: `Server=.;Database=Salon25Db-Loc;Trusted_Connection=True;TrustServerCertificate=true;`
+Override: `dotnet run --project src/Migrations/Salon25.Migrations.csproj -- "Server=...;Database=...;"`
+
+**Script template**: Use standard `ALTER TABLE` / `CREATE TABLE` SQL. Keep scripts idempotent where possible. Match EF Core `OnModelCreating()` configuration exactly (column types, precision, nullability, defaults).
+
+```sql
+-- Example: Adding nullable and non-null columns with defaults
+ALTER TABLE {Table} ADD {NullableCol} NVARCHAR(20) NULL;
+ALTER TABLE {Table} ADD {RequiredCol} DECIMAL(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE {Table} ADD {BitCol} BIT NOT NULL DEFAULT 0;
 ```
 
-> Full patterns (naming, templates, idempotency, script rules): see `/add-dbup` skill.
-
-Ensure the EF Core `IEntityTypeConfiguration<T>` from Step 2 matches the SQL schema exactly (table name, column types, nullability, indexes).
+**Important**: After creating the SQL file, run the migration command above to apply it to the local database. Verify the output shows "Upgrade successful".
 
 ---
-
-### Step 7 — Presentation Layer
+### Step 7 — Presentation Layer (Refit Client + ServiceClient + ViewModel)
 
 **Refit Client**: `src/Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs` — Refit interface with `[Get]`/`[Post]` attributes, `apiVersion` + `CancellationToken` on every method. Register new interfaces in `BffServiceClients.AddBffServiceClients()`.
 

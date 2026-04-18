@@ -2,61 +2,81 @@
 
 *How to move from vibe coding to a disciplined, verifiable development process when working with AI coding assistants.*
 
-> **Part 2 of 2.** This article walks through the spec-driven process with concrete examples. For best practices and the copilot-sync template system, see [Part 1: Best Practices for AI-Assisted Coding](BLOGPOST.md).
+> **Part 2 of 2.** This article shows the process in action. For the broader principles and the reusable configuration library, see [Part 1: Best Practices for AI-Assisted Coding](BLOGPOST.md).
 
 ---
 
-## The Problem: Vibe Coding
+## The Problem: Vibe Coding Feels Fast Until It Doesn't
 
-Most developers using AI coding assistants today fall into a pattern we call **vibe coding**. The conversation goes something like this:
+Most teams experimenting with AI coding assistants fall into the same trap.
+
+Someone types:
 
 > "Add a subscriptions feature to the app."
 
-The AI starts generating code. Entity classes appear. A repository materialises. A controller takes shape. Pages get scaffolded. Twenty minutes later, there are fifteen new files across six projects. The developer glances at the output, sees that it looks roughly right, and commits.
+The model starts working. Entities appear. Repositories show up. Controllers and DTOs materialize. A page gets scaffolded. Twenty minutes later there are fifteen new files across half the solution, and at first glance it all looks plausible.
 
-What could go wrong?
+That is exactly the danger.
 
-Everything. The entity doesn't match the database schema. The DTO has properties the UI never uses and is missing ones it needs. The controller returns a shape the page doesn't expect. The repository uses a query pattern that differs from every other repository in the codebase. There are no tests. The naming conventions are inconsistent. And the developer — the person who should be accountable for the design — can no longer explain why half of these decisions were made.
+The code often *looks* coherent long before it actually is. The entity does not match the database schema. The DTO exposes fields the UI never uses and misses fields it needs. The controller returns a shape the client does not expect. Naming drifts away from the rest of the codebase. Tests are missing or meaningless. And the developer, who is still accountable for the result, can no longer explain why the design looks the way it does.
 
-**Vibe coding is not a productivity gain. It is a control loss.** The AI produces plausible-looking code at high speed, and the developer's role degrades from engineer to approver of things they didn't design and don't fully understand.
+That is what I mean by **vibe coding**: using AI in a way that creates the *feeling* of momentum while steadily eroding control.
 
-The alternative is **spec-driven development**: a structured process where the developer defines intent, the AI plans before coding, implementation happens in small verified steps, and the human stays in control at every stage.
+The alternative is **spec-driven development**. Instead of asking the AI to improvise, you give it a clear contract, a reviewed plan, and a tight execution loop. The model still writes code, but it does so inside a process the developer controls.
 
 ---
 
 ## The Three Pillars
 
-Spec-driven development with AI rests on three pillars:
+In practice, spec-driven development with AI rests on three pillars:
 
-1. **Specifications** — Define what to build before building it
-2. **Plans** — Decompose work into vertical slices before writing code
-3. **Red-Green-Refactor with human gates** — Implement one verified step at a time
+1. **Specifications** — define what should be built before code exists.
+2. **Plans** — break the work into small vertical slices before implementation starts.
+3. **Red-Green-Refactor with human gates** — implement one verified step at a time.
 
-Each pillar serves a specific purpose. Specifications prevent scope creep. Plans prevent architectural chaos. Red-Green-Refactor with gates prevents compounding errors.
+Each pillar solves a different failure mode.
 
-Let's look at each in detail.
+- Specs stop the AI from guessing.
+- Plans stop the AI from wandering across the architecture.
+- Red-Green-Refactor with gates stops mistakes from compounding across multiple steps.
+
+Once these three are in place, the AI becomes much more useful. It stops behaving like an overeager intern and starts behaving like a disciplined teammate.
 
 ---
 
-## Pillar 1: Specifications — The Contract Between Developer and AI
+## Pillar 1: Specifications — The Contract Between the Developer and the Model
 
 ### Why Specs Matter
 
-Without a specification, the AI infers intent from a vague prompt. "Add subscriptions" could mean a hundred different things. Which entity properties? What validation rules? Which API endpoints? What error messages? Who can access it? The AI will answer all these questions for you — and most of the answers will be wrong, because it's guessing.
+Without a spec, the AI is forced to infer intent from a vague prompt.
 
-A specification makes intent explicit. It is a structured document that captures:
+"Add subscriptions" sounds simple, but it leaves too many decisions open:
 
-- **Who** benefits and **what** they can do
-- **Acceptance criteria** — concrete, testable conditions for "done"
-- **Data model** — entities, properties, types, constraints
-- **API surface** — endpoints, request/response shapes, error codes
-- **Business rules** — validation, constraints, and their error messages
-- **Edge cases** — what happens when things go wrong
-- **Non-goals** — what is explicitly out of scope
+- What properties does a subscription have?
+- Who is allowed to create one?
+- Which validation rules apply?
+- Which endpoints are required?
+- What happens when there are no subscriptions?
+- What is intentionally out of scope?
+
+The model will happily answer all of those questions for you. The problem is that it answers them by guessing.
+
+A good specification removes that guesswork. It captures the things the AI should not invent for itself:
+
+- **Who** the feature is for
+- **What** the user can do
+- **Acceptance criteria** for done
+- **Data model** and constraints
+- **API surface**
+- **Business rules** and expected error messages
+- **Edge cases**
+- **Out-of-scope items**
+
+Once this exists, the developer and the AI are working from the same contract.
 
 ### A Concrete Spec Example
 
-Here's what a real spec looks like for a "Patient Subscriptions" feature:
+Here is a realistic spec for a "Patient Subscriptions" feature:
 
 ````markdown
 # Spec: Patient Subscriptions
@@ -71,13 +91,13 @@ Here's what a real spec looks like for a "Patient Subscriptions" feature:
 
 ## Acceptance Criteria
 
-| #    | Given                              | When                              | Then                                              |
-|------|------------------------------------|-----------------------------------|---------------------------------------------------|
-| AC-1 | Patient is authenticated           | They navigate to /subscriptions   | A list of their active subscriptions is displayed  |
-| AC-2 | Patient has no subscriptions       | They navigate to /subscriptions   | An empty-state message is shown                    |
-| AC-3 | Subscription has expired           | They view the list                | Expired subscriptions are not shown                |
-| AC-4 | Doctor creates a subscription      | They submit the form              | The subscription appears in the patient's list     |
-| AC-5 | Doctor submits with missing fields | They click Save                   | Validation errors are shown, nothing is persisted  |
+| # | Given | When | Then |
+|---|-------|------|------|
+| AC-1 | Patient is authenticated | They navigate to /subscriptions | A list of active subscriptions is displayed |
+| AC-2 | Patient has no subscriptions | They navigate to /subscriptions | An empty-state message is shown |
+| AC-3 | A subscription has expired | The list is loaded | Expired subscriptions are not shown |
+| AC-4 | Doctor creates a valid subscription | They submit the form | The subscription appears in the patient's list |
+| AC-5 | Doctor submits invalid data | They click Save | Validation errors are shown and nothing is persisted |
 
 ---
 
@@ -85,22 +105,22 @@ Here's what a real spec looks like for a "Patient Subscriptions" feature:
 
 ### Entity: `Subscription`
 
-| Property    | Type     | Required | Constraints                    |
-|-------------|----------|----------|--------------------------------|
-| Id          | int      | PK       | Auto-generated                 |
-| PatientId   | int      | Yes      | FK → Patient                   |
-| MedicationName | string | Yes     | Max 200 chars                  |
-| StartDate   | DateOnly | Yes      | Must be today or future        |
-| EndDate     | DateOnly | No       | Must be after StartDate        |
-| CreatedBy   | string   | Yes      | Doctor's national register ID  |
+| Property | Type | Required | Constraints |
+|----------|------|----------|-------------|
+| Id | int | PK | Auto-generated |
+| PatientId | int | Yes | FK -> Patient |
+| MedicationName | string | Yes | Max 200 chars |
+| StartDate | DateOnly | Yes | Must be today or later |
+| EndDate | DateOnly | No | Must be after StartDate |
+| CreatedBy | string | Yes | Doctor's national register ID |
 
 ---
 
 ## API Endpoints
 
 ### `GET /api/subscriptions?patientId={id}`
-**Purpose**: Return active subscriptions for a patient.
-**Auth**: Bearer (patient or doctor role)
+**Purpose**: Return active subscriptions for a patient.  
+**Auth**: Bearer (patient or doctor role)  
 **Response** (200):
 ```json
 [
@@ -112,11 +132,11 @@ Here's what a real spec looks like for a "Patient Subscriptions" feature:
   }
 ]
 ```
-**Error responses**: 401 → Unauthorized, 403 → Wrong patient
+**Error responses**: 401 -> Unauthorized, 403 -> Wrong patient
 
 ### `POST /api/subscriptions`
-**Purpose**: Create a new subscription.
-**Auth**: Bearer (doctor role only)
+**Purpose**: Create a new subscription.  
+**Auth**: Bearer (doctor role only)  
 **Request body**:
 ```json
 {
@@ -126,95 +146,123 @@ Here's what a real spec looks like for a "Patient Subscriptions" feature:
   "endDate": "2026-10-01"
 }
 ```
-**Response** (201): Created subscription
-**Error responses**: 400 → Validation errors, 401, 403
+**Response** (201): Created subscription  
+**Error responses**: 400 -> Validation errors, 401, 403
 
 ---
 
 ## Business Rules
 
-| #    | Rule                                        | Error message                               |
-|------|---------------------------------------------|---------------------------------------------|
-| BR-1 | MedicationName is required                  | "Medication name is required"               |
-| BR-2 | StartDate must be today or in the future    | "Start date cannot be in the past"          |
-| BR-3 | EndDate, if provided, must be after StartDate | "End date must be after start date"       |
-| BR-4 | Only doctors can create subscriptions       | HTTP 403                                    |
+| # | Rule | Error message |
+|---|------|---------------|
+| BR-1 | MedicationName is required | "Medication name is required" |
+| BR-2 | StartDate must be today or later | "Start date cannot be in the past" |
+| BR-3 | EndDate, if provided, must be after StartDate | "End date must be after start date" |
+| BR-4 | Only doctors can create subscriptions | HTTP 403 |
 
 ---
 
 ## Out of Scope
 
-- Editing or deleting existing subscriptions
-- Medication lookup / auto-complete
-- Notification when a subscription is created
+- Editing or deleting subscriptions
+- Medication lookup or auto-complete
+- Notifications when a subscription is created
 - Prescription history
 ````
 
-### What the Spec Gives You
+This is not documentation for documentation's sake. It is the minimum structure needed to stop the AI from improvising on critical details.
 
-Every decision is explicit. The AI doesn't need to guess whether `EndDate` is required (it's not). It doesn't need to invent validation rules (they're listed). It doesn't need to decide who can create subscriptions (doctors only). And when the developer reviews the AI's output, they can point to the spec and say: "BR-3 says EndDate must be after StartDate, but your validation checks `>=` instead of `>`."
+### What the Spec Actually Buys You
 
-The spec also explicitly says what's **out of scope**. Without this, the AI will happily add edit and delete endpoints, a medication search dropdown, and email notifications — none of which were requested.
+The value of a spec is not abstract. It shows up immediately in review.
+
+If the AI writes validation logic using `>=` instead of `>`, you can point directly to BR-3. If it adds edit and delete endpoints, you can point to the out-of-scope section. If it makes `EndDate` required, you can point to the data model.
+
+That changes the developer's role. Instead of arguing with code, you are validating implementation against an agreed contract.
+
+### Writing the Spec with AI
+
+This is one of the most useful ways to use AI early in the process.
+
+You do not need to sit down and write the whole spec from a blank page. A better approach is an **interview-style prompt** that asks focused questions and assembles the answers into a structured `_specs/<FeatureName>.md` file.
+
+That is why this repo now includes a dedicated `write-spec` prompt. The workflow is simple:
+
+1. The developer brings the feature idea.
+2. The AI runs a short Q&A session.
+3. The AI drafts the user story, acceptance criteria, data model, API surface, business rules, edge cases, and out-of-scope section.
+4. The developer reviews and adjusts the spec.
+5. Only then does planning begin.
+
+This matters because the interview happens at the right level. You are discussing intent, not classes and folders. That keeps the conversation grounded in product and business behaviour before implementation details take over.
 
 ### When to Write Specs
 
-Not every change needs a spec. Here's a simple rule:
+Not every change needs a specification.
 
-- **Spec required**: New feature, new user-facing behaviour, new API surface
-- **Spec optional**: Multi-file refactor, infrastructure change
-- **No spec needed**: Bugfix, config change, 1-2 file change
+- **Spec required**: new feature, new user-facing behaviour, new API surface
+- **Spec optional**: larger refactor, infrastructure change, architecture decision
+- **No spec needed**: bugfix, config correction, 1-2 file change
 
-The spec lives at `_specs/<FeatureName>.md` in the repository root. It is committed to Git alongside the code, so any developer (or AI agent) can read it later to understand _why_ something was built the way it was.
+In this workflow, specs live at `_specs/<FeatureName>.md` in the repository root.
 
 ---
 
-## Pillar 2: Plans — Decomposing Work into Vertical Slices
+## Pillar 2: Plans — Turning Intent into an Execution Strategy
 
 ### From Spec to Plan
 
-The spec defines **what** to build. The plan defines **how** — in what order, touching which files, verified by which tests. The plan is derived from the spec after the AI has explored the codebase to understand existing patterns.
+The spec defines **what** should exist. The plan defines **how** the work will be delivered.
 
-A plan is a markdown file at `_plans/<FeatureName>.md` with concrete implementation steps. Each step is a single Red-Green-Refactor cycle that delivers one vertical behaviour slice.
+That distinction matters.
+
+The spec says, "patients can view subscriptions" and "doctors can create subscriptions." The plan says, "first build the list page with a stubbed service, then wire it to the real API, then build the create form, then wire the create flow." The plan translates intent into an ordered set of implementation steps.
+
+A plan lives at `_plans/<FeatureName>.md`. Each step is one Red-Green-Refactor cycle with explicit scope, tests, proof criteria, and a human gate.
 
 ### The Planning Gate
 
-Before any code is written, the plan must be **approved by the developer**. This is the planning gate — a hard stop between thinking and doing.
+Before any code is written, the plan must be reviewed and approved.
 
-The AI agent asks itself: _Does this change need a plan?_
+This is the hard stop between thinking and doing.
+
+The AI should ask a simple question:
+
+> Does this change need a plan?
 
 | Situation | Plan required? |
 |-----------|---------------|
 | New feature or vertical slice | **Yes** |
 | Change touching 3+ files | **Yes** |
-| Risk area (auth, PII, DB schema, shared contracts) | **Yes** |
-| 1–2 file bugfix | No — but still test-first |
-| Config correction, simple refactor | No |
+| Risk area: auth, PII, DB schema, shared contracts | **Yes** |
+| 1-2 file bugfix | No, but still test-first |
+| Config correction or simple refactor | No |
 
-If a plan is required, the AI produces it, presents it, and **stops**. No code is written until the developer says "approved."
+If the answer is yes, the AI writes the plan and stops. No production code starts until the developer approves it.
+
+That single rule prevents a remarkable amount of wasted work.
 
 ### Vertical Slices, Not Horizontal Layers
 
-This is the most important planning principle and the one most teams get wrong.
+This is the planning principle that matters most.
 
-**Horizontal slicing** (the anti-pattern) plans by layer:
+The natural instinct, for both humans and models, is to decompose work by layer:
 
 ```
 Step 1 — Create the Subscription entity
 Step 2 — Add SubscriptionRepository
 Step 3 — Create SubscriptionCreateHandler
-Step 4 — Add GET /api/subscriptions endpoint
-Step 5 — Add POST /api/subscriptions endpoint
+Step 4 — Add GET endpoint
+Step 5 — Add POST endpoint
 Step 6 — Build the subscriptions list page
-Step 7 — Build the create subscription form
+Step 7 — Build the create form
 ```
 
-This feels orderly. But the problems are severe:
+It looks organized. In reality, it delays feedback and pushes integration risk to the end.
 
-- **Late integration.** The entity is built in Step 1, but the page that displays it isn't built until Step 6. If the entity shape doesn't match what the page needs, you don't find out until six steps in.
-- **No early feedback.** The user can't see or validate anything until Step 6. Five steps of backend code are built before anyone checks whether the UI makes sense.
-- **All-or-nothing.**  If Step 4 reveals that the query shape needs to change, Steps 1–3 might need rework. Changes cascade backward through completed steps.
+By the time you reach the UI, you may discover that the entity shape is wrong, the DTO is incomplete, the query returns the wrong projection, or the route contract does not match the client. Now several "completed" steps have to be reopened.
 
-**Vertical slicing** plans by user-visible behaviour:
+Vertical slicing avoids that by planning around **user-visible behaviour** instead of technical layers:
 
 ```
 Step 1 — Display subscription list (stubbed)
@@ -223,30 +271,27 @@ Step 3 — Create subscription form (stubbed)
 Step 4 — Wire subscription create to real API
 ```
 
-Each vertical slice follows a two-phase pattern:
+Each slice has two phases:
 
-1. **Stub** — Build the UI with a mocked/stubbed backend. The user validates the interface, the layout, the data shape, the interaction flow. Tests verify the ViewModel works with the mock.
-2. **Wire** — Replace the stub with real code from top to bottom: controller → application handler → domain → persistence → database. Integration tests verify the full stack. Remove the stub.
+1. **Stub** — build the UI against a fake or mocked service so the user can validate the experience early.
+2. **Wire** — replace the stub with real production code from controller to persistence and database.
 
-### Why This Order?
+This gives you three practical advantages:
 
-**Fail fast.** By integrating all layers in Step 2, you discover immediately whether the entity shape matches the DTO, whether the query returns what the page expects, whether the controller route matches the Refit client. Problems surface on the second step — not the seventh.
-
-**UI feedback early.** The user sees and validates the interface in Step 1, before any backend work begins. If the columns are wrong, if the form layout is confusing, if a field is missing — you find out when the fix is cheap (change a ViewModel), not after building six layers of backend code.
-
-**Smaller blast radius.** When something needs to change, only the current stub-wire pair is affected. You don't have to trace the change through five independent horizontal steps.
+- **You fail fast.** Contract mismatches show up on Step 2 instead of Step 7.
+- **You get UI feedback early.** The user can review the shape of the feature before backend code sprawls.
+- **You reduce blast radius.** If something changes, one slice moves, not the whole architecture.
 
 ### A Concrete Plan Example
 
-Here's what the plan looks like for the Patient Subscriptions feature:
+Here is a more realistic plan for the subscriptions feature:
 
 ```markdown
 # Plan: Patient Subscriptions — Patient views active medication subscriptions
 
 ## Overview
-Patients can view their active medication subscriptions. Doctors can create new 
-subscriptions. Reference feature: **Doctors** (existing CRUD feature to follow 
-as the pattern across all layers).
+Patients can view their active medication subscriptions. Doctors can create new
+subscriptions. Reference feature: **Doctors**.
 
 ---
 
@@ -254,66 +299,62 @@ as the pattern across all layers).
 
 **Scope** *(Presentation only — stub phase)*:
 - `src/Presentation/Subscriptions/ViewModels/SubscriptionsViewModel.cs` *(create)*
-- `src/Presentation/Subscriptions/Services/ISubscriptionService.cs` *(create)*
-- `src/Presentation/Subscriptions/Services/SubscriptionServiceStub.cs` *(create)*
+- `src/Presentation/Subscriptions/ServiceClients/ISubscriptionServiceClient.cs` *(create)*
+- `src/Presentation/Subscriptions/ServiceClients/SubscriptionServiceClientStub.cs` *(create)*
 - `src/Presentation/Subscriptions/Pages/Subscriptions.razor` *(create)*
 - `src/Contracts/Subscriptions/Api/SubscriptionDto.cs` *(create)*
 - `src/Test/Unit/Presentation/Subscriptions/SubscriptionsViewModelTests.cs` *(create)*
 
-**RED** *(write this test first)*:
+**RED**:
 - Test: `InitializeAsync_WithSubscriptions_LoadsList`
 - Command: `{{TestExePath}} --filter "SubscriptionsViewModelTests"`
 
 **GREEN**:
-- SubscriptionDto record with Id, MedicationName, StartDate, EndDate
-- ISubscriptionService with GetByPatientAsync(int patientId)
-- SubscriptionServiceStub returning 3 fake subscriptions
-- SubscriptionsViewModel: IsBusy guard, InitializeAsync loads via service
-- Subscriptions.razor: MudTable bound to ViewModel.Items
+- `SubscriptionDto` with Id, MedicationName, StartDate, EndDate
+- `ISubscriptionServiceClient` with `GetByPatientAsync(int patientId)`
+- Stub service returning three fake subscriptions
+- `SubscriptionsViewModel` with `IsBusy` guard and `InitializeAsync`
+- `Subscriptions.razor` bound to `ViewModel.Items`
 
 **DB changes**: none
 
 **🛑 HUMAN GATE**:
-- [ ] Behavioral: ViewModel test passes — list loads with 3 stubbed items
-- [ ] Review: Page layout matches Doctor list page pattern
+- [ ] Behavioral: ViewModel test passes and the page renders three stubbed items
+- [ ] Review: Page layout matches the reference feature pattern
 
 ---
 
 ## Step 2 — Wire subscription list to real API
 
 **Scope** *(all backend layers — wire phase)*:
-- `src/Core/Domain/Shared/Entities/Subscription.cs` *(create)*
+- `src/Core/Domain/Functionalities/Subscriptions/Subscription.cs` *(create)*
 - `src/Core/Persistence/EntityTypeConfigurations/SubscriptionConfiguration.cs` *(create)*
 - `src/Core/Persistence/Repositories/SubscriptionRepository.cs` *(create)*
 - `src/Core/Application/Functionalities/Subscriptions/Queries/GetSubscriptions/` *(create)*
-- `src/Host/BFF/Controllers/SubscriptionController.cs` *(create — GET only)*
+- `src/Host/Client/Controllers/SubscriptionController.cs` *(create — GET only)*
 - `src/Database/Scripts/0001_CreateSubscriptionTable.sql` *(create)*
-- `src/Presentation/Subscriptions/Services/SubscriptionService.cs` *(create — real Refit)*
+- `src/Presentation/Subscriptions/ServiceClients/SubscriptionServiceClient.cs` *(create — real Refit-backed service client)*
 - `src/Presentation/Shared/ServiceClients/Bff/Clients/ISubscriptionClient.cs` *(create)*
 - `src/Test/Unit/Application/Subscriptions/GetSubscriptionsQueryTests.cs` *(create)*
 - `src/Test/Integration/Endpoints/Subscriptions/GetSubscriptionsTest.cs` *(create)*
 
 **RED**:
-- Unit: `Execute_WithActiveSubscriptions_ReturnsList` (mock repo)
-- Integration: `GetSubscriptions_Authenticated_ReturnsOk` (WebApplicationFactory + SQLite)
+- Unit: `Execute_WithActiveSubscriptions_ReturnsList`
+- Integration: `GetSubscriptions_Authenticated_ReturnsOk`
 - Integration: `GetSubscriptions_WrongPatient_ReturnsForbidden`
-- Command: `{{TestExePath}} --filter "GetSubscriptionsQueryTests"`
-- Command: `{{TestExePath}} --filter "GetSubscriptionsTest"`
 
 **GREEN**:
-- Subscription entity (Id, PatientId, MedicationName, StartDate, EndDate, CreatedBy)
-- SubscriptionRepository with GetActiveByPatientAsync (filter EndDate > today)
-- IGetSubscriptionsQuery + GetSubscriptionsQuery
-- SubscriptionController GET /api/subscriptions?patientId={id}
-- ISubscriptionClient (Refit), SubscriptionService (replaces stub)
-- SubscriptionConfiguration (fluent API)
-- 0001_CreateSubscriptionTable.sql (CREATE TABLE)
+- `Subscription` entity and repository
+- `IGetSubscriptionsQuery` and `GetSubscriptionsQuery`
+- `SubscriptionController` GET `/api/subscriptions?patientId={id}`
+- Refit client + real service client replacing the stub
+- EF configuration + DbUp script
 
 **DB changes**: `src/Database/Scripts/0001_CreateSubscriptionTable.sql`
 
 **🛑 HUMAN GATE**:
-- [ ] Behavioral: Integration tests pass; GET /api/subscriptions returns list
-- [ ] Review: Entity, repo, query, controller follow Doctors pattern
+- [ ] Behavioral: Integration tests pass and GET `/api/subscriptions` returns the expected list
+- [ ] Review: Entity, query, repository, and controller follow the reference pattern
 
 ---
 
@@ -328,19 +369,18 @@ as the pattern across all layers).
 **RED**:
 - Test: `Submit_EmptyMedicationName_ShowsValidationError`
 - Test: `Submit_ValidData_CallsService`
-- Command: `{{TestExePath}} --filter "AddSubscriptionViewModelTests"`
 
 **GREEN**:
-- AddSubscriptionDto record (PatientId, MedicationName, StartDate, EndDate)
-- AddSubscriptionViewModel with field validation (BR-1 through BR-3)
-- SubmitAsync method calls stubbed service
-- AddSubscription.razor: MudForm with validated fields
+- `AddSubscriptionDto`
+- `AddSubscriptionViewModel` with BR-1 through BR-3 validation
+- Stub submission flow
+- `AddSubscription.razor` with validated fields
 
 **DB changes**: none
 
 **🛑 HUMAN GATE**:
-- [ ] Behavioral: ViewModel tests pass — validation errors display correctly
-- [ ] Review: Form matches spec business rules BR-1, BR-2, BR-3
+- [ ] Behavioral: Validation errors render correctly and valid submission calls the stub service
+- [ ] Review: Form matches the business rules in the spec
 
 ---
 
@@ -348,87 +388,95 @@ as the pattern across all layers).
 
 **Scope** *(all backend layers — wire phase)*:
 - `src/Core/Application/Functionalities/Subscriptions/Commands/AddSubscription/` *(create)*
-- `src/Host/BFF/Controllers/SubscriptionController.cs` *(modify — add POST)*
-- `src/Presentation/Subscriptions/Services/SubscriptionService.cs` *(modify — add AddAsync)*
+- `src/Host/Client/Controllers/SubscriptionController.cs` *(modify — add POST)*
+- `src/Presentation/Subscriptions/ServiceClients/SubscriptionServiceClient.cs` *(modify — add AddAsync)*
 - `src/Test/Unit/Application/Subscriptions/AddSubscriptionHandlerTests.cs` *(create)*
 - `src/Test/Integration/Endpoints/Subscriptions/PostSubscriptionTest.cs` *(create)*
 
 **RED**:
 - Unit: `Execute_ValidCommand_ReturnsSuccess`
-- Unit: `Execute_PastStartDate_ReturnsFailure` (BR-2)
+- Unit: `Execute_PastStartDate_ReturnsFailure`
 - Integration: `PostSubscription_ValidData_ReturnsCreated`
 - Integration: `PostSubscription_MissingFields_ReturnsBadRequest`
 
 **GREEN**:
-- AddSubscriptionCommand with Validate() (BR-1 through BR-3)
-- AddSubscriptionCommandHandler using Result<T>
-- SubscriptionController POST /api/subscriptions (doctor role ⚠️)
-- SubscriptionService.AddAsync (real Refit call)
+- `AddSubscriptionCommand` and `AddSubscriptionCommandHandler`
+- POST `/api/subscriptions`
+- Real `AddAsync` implementation in the service client
 
-**DB changes**: none (table created in Step 2)
+**DB changes**: none
 
 **🛑 HUMAN GATE**:
-- [ ] Behavioral: Integration tests pass; POST creates record; validation errors return 400
-- [ ] Review: ⚠️ Authorization check (doctor role only — BR-4)
+- [ ] Behavioral: Integration tests pass; valid POST creates a record; invalid POST returns 400
+- [ ] Review: Authorization and business rules are enforced correctly
 ```
 
-Notice several things about this plan:
+The important thing here is not the exact class names. It is the shape of the plan:
 
-1. **Step names describe behaviour**, not layers. "Display subscription list (stubbed)" tells you what the system can do after the step. "Create Entity" would not.
-2. **Each slice is completed before the next starts.** Steps 1–2 are the "view" slice. Steps 3–4 are the "create" slice. They don't interleave.
-3. **The stub phase is Presentation only.** No backend code, no database. Just the UI with fake data.
-4. **The wire phase touches many layers in one step.** That's correct — a vertical slice is supposed to cross layers. What matters is that it delivers one coherent behaviour.
-5. **Every step has concrete tests in the RED section.** The test method names, file paths, and run commands are specified before any production code is written.
-6. **Risk areas are flagged.** Step 4 marks the authorization check with ⚠️ because it involves role-based access control.
+- step names describe behaviour
+- each slice is completed before the next starts
+- the stub phase is intentionally narrow
+- the wire phase crosses layers on purpose
+- every step has explicit proof and review criteria
 
 ### The Interview Before the Plan
 
-Before writing a plan, the AI agent should confirm it has enough information. We encode an interview checklist:
+Good planning starts with the right questions.
 
-1. **Reference feature identified?** Which existing feature in the codebase should be used as the pattern? (Mandatory — do not proceed without one.)
-2. **Entity properties and types listed?** (From the spec.)
-3. **Database changes needed?** New table, modify existing, or none?
-4. **Relationships to existing entities?** Foreign keys, navigation properties?
-5. **New API endpoints?** Verbs, routes, request/response shapes?
-6. **New Blazor pages?** Routes, layouts, Components?
-8. **Authentication claims needed?** Does the controller read user claims that need to be configured in the token server?
+Before an AI writes a plan, it should confirm that it has enough information to do so safely:
 
-If any answer is missing, the AI asks focused questions at this stage and not later — not halfway through implementation.
+1. Which existing feature is the reference pattern?
+2. What entities and properties are involved?
+3. Is there a database change?
+4. Are there relationships to existing entities?
+5. Which endpoints are needed?
+6. Which UI pages or routes are needed?
+7. Are there auth or claims requirements?
+
+If any of that is missing, the AI should ask now, not halfway through implementation.
 
 ---
 
 ## Pillar 3: Red-Green-Refactor with Human Gates
 
-### The Loop
+### The Core Loop
 
-Each plan step is executed as a single Red-Green-Refactor cycle. This is the exact loop:
+Every plan step should run through the same execution loop:
 
 ```
-1. READ       Read the plan step. Understand scope, files, and the test to write.
-2. RED        Write the failing test FIRST. Run it. Confirm it FAILS.
-3. GREEN      Write minimal production code to make the test pass. Run. Confirm PASS.
-4. REFACTOR   Clean up if needed. Do not change behaviour.
-5. ANALYSE    Run static analysis. Fix all violations.
-6. PROVE      Build (zero warnings) + all tests pass + format check passes.
-7. 🛑 STOP    Present results. Wait for human approval.
-8. MARK DONE  After approval, update plan checkboxes [ ] → [x].
+READ      — Read the plan step and understand the scope.
+RED       — Write the failing test first. Run it. Confirm it fails.
+GREEN     — Write the minimum production code needed to pass.
+REFACTOR  — Clean up without changing behaviour.
+ANALYSE   — Run static analysis and fix issues.
+PROVE     — Build, test, and format checks all pass.
+🛑 STOP   — Present results and wait for human approval.
+MARK DONE — After approval, update the plan checkboxes.
 ```
+
+Three rules are non-negotiable:
+
+1. **Never skip RED.** The test must fail before production code exists.
+2. **Never batch steps.** One step, one proof cycle, one review.
+3. **Never skip the human gate.** Approval is part of the workflow, not an optional extra.
 
 ### Why RED Must Come First
 
-The most common AI mistake is writing the test and production code simultaneously. This seems efficient — but it bypasses the entire point of test-first development.
+The most common AI mistake is writing the test and the production code at the same time.
 
-When you write the test first and confirm it fails, you prove two things:
-1. **The test actually tests something.** A test that passes on the first run might be testing nothing — wrong assertion, wrong mock setup, wrong method under test. A confirmed failure proves the test would catch a real bug.
-2. **The production code is causally linked to the test.** You know the code you wrote is what made the test pass. Without the confirmed failure, you can't be sure.
+It feels efficient, but it breaks the feedback loop.
 
-For AI coding, RED-first is even more critical. The AI generates plausible-looking tests that may have subtle bugs — wrong assertion values, mock setups that match any input, assertions that never execute because of early returns. A confirmed failure catches all of these before any production code is written.
+If the test was never observed failing, you do not know whether it would have caught a real defect. The assertion may be wrong. The mock setup may be too permissive. The test may accidentally validate nothing.
 
-### Example: RED-first in Practice
+When the test fails first and then passes after the code change, the relationship is clear. The test is meaningful, and the production code is the reason it now passes.
 
-**Step 2 of the Subscriptions plan** asks us to implement the query that returns active subscriptions.
+That matters even more with AI-generated tests, because they often look correct while hiding subtle mistakes.
 
-**RED** — The agent writes this test:
+### RED-First in Practice
+
+Take Step 2 from the subscriptions example: return active subscriptions for a patient.
+
+The AI starts by writing the failing unit test:
 
 ```csharp
 [TestClass]
@@ -442,8 +490,14 @@ public class GetSubscriptionsQueryTests
         mockRepo.Setup(r => r.GetActiveByPatientAsync(42))
             .ReturnsAsync(new List<Subscription>
             {
-                new() { Id = 1, PatientId = 42, MedicationName = "Metformin 500mg",
-                         StartDate = new DateOnly(2026, 4, 1), EndDate = new DateOnly(2026, 10, 1) }
+                new()
+                {
+                    Id = 1,
+                    PatientId = 42,
+                    MedicationName = "Metformin 500mg",
+                    StartDate = new DateOnly(2026, 4, 1),
+                    EndDate = new DateOnly(2026, 10, 1),
+                },
             });
 
         var query = new GetSubscriptionsQuery(mockRepo.Object);
@@ -458,273 +512,147 @@ public class GetSubscriptionsQueryTests
 }
 ```
 
-The agent runs the test. **It fails** — `GetSubscriptionsQuery` doesn't exist yet. The failure is confirmed. This proves the test is wired correctly and will actually validate the query when it's built.
+At this point the test fails, because `GetSubscriptionsQuery` does not exist yet. Good. That is exactly what should happen.
 
-**GREEN** — Now the agent writes the minimal code: the entity, the repository interface, and the query implementation. It runs the test again. **It passes.** The agent knows its code is correct because the test that provably failed now provably passes.
-
-**Without RED-first**, the agent would write the test and the query simultaneously. The test might pass — but did it pass because the code is correct, or because the mock setup accidentally matches everything? You can't tell. RED-first removes this ambiguity.
+Only then does the AI create the minimal production code: the repository contract, the query implementation, the mapping, and the endpoint path needed for the full slice. When the test turns green, you know it turned green for a reason.
 
 ### The Human Gate
 
-After PROVE, the agent presents its results and **stops**:
+After the proof step, the AI stops and presents results.
 
-```
-✅ Step 2 — Wire subscription list to real API
+For example:
 
-Build:       0 warnings, 0 errors
-Tests:       24 passed, 0 failed
-Format:      No changes needed
+```text
+Step 2 — Wire subscription list to real API
 
-New files:
-  - src/Core/Domain/Shared/Entities/Subscription.cs
-  - src/Core/Persistence/Repositories/SubscriptionRepository.cs
-  - src/Core/Application/Functionalities/Subscriptions/Queries/GetSubscriptions/...
-  - src/Host/BFF/Controllers/SubscriptionController.cs
-  - src/Test/Integration/Endpoints/Subscriptions/GetSubscriptionsTest.cs
+Build:   0 warnings, 0 errors
+Tests:   24 passed, 0 failed
+Format:  no changes required
 
 🛑 HUMAN GATE:
-  - [ ] Integration test GetSubscriptions_Authenticated_ReturnsOk passes
-  - [ ] Entity, repo, query, controller follow Doctors pattern
+- [ ] Integration test GetSubscriptions_Authenticated_ReturnsOk passes
+- [ ] Query, repository, controller, and DTO follow the reference feature pattern
 ```
 
-The developer reviews the changes. They check that:
-- The entity properties match the spec
-- The repository query filters correctly (EndDate > today)
-- The controller route matches the spec
-- The integration test covers the documented error cases
-- The naming follows the reference feature pattern
+This is where the developer checks the behaviour and the design:
 
-Only after explicit approval does the agent proceed to Step 3.
+- Does the implementation satisfy the spec?
+- Do the tests cover the acceptance criteria?
+- Do the file locations and naming match the codebase?
+- Are risk areas handled correctly?
 
-**Why this matters:** Without the gate, the AI compounds errors. A wrong DTO shape in Step 2 leads to a wrong Refit client in Step 3, which leads to a broken page in Step 4. By the time you notice, three steps need to be unwound. With gates, you catch the wrong DTO shape in Step 2 — before any dependent code exists.
+Only after approval does the next step begin.
+
+That gate is what prevents AI errors from cascading into later steps.
 
 ### Bugfixes: Regression Test First
 
-The same RED-first principle applies to bugfixes, but with a simpler workflow. No plan is needed for a 1-2 file fix, but a regression test is always required:
+The same principle applies to bugfixes, just with a smaller workflow:
 
-1. **Investigate** — Read the reported code, identify the root cause.
-2. **RED** — Write a test that reproduces the bug. Confirm it fails.
-3. **GREEN** — Make the minimal fix. Confirm the test passes.
-4. **Verify** — Full build + test suite + format check.
+1. Investigate the root cause.
+2. Write a regression test that reproduces the bug.
+3. Confirm it fails.
+4. Make the smallest fix.
+5. Confirm the test passes.
+6. Run the standard proof commands.
 
-The regression test ensures the bug can never return silently. It also forces the developer to understand the bug before fixing it — the AI can't just randomly change code until the symptoms disappear.
+This keeps bugfixes honest. The AI does not get to poke at code until symptoms disappear. It has to prove it understands the failure first.
 
 ---
 
 ## Progress Tracking Across Sessions
 
-AI coding sessions are stateless — context is lost when a session ends. This is a fundamental constraint. But our plan files solve it with a simple convention.
+One of the hardest things about AI-assisted development is that sessions are ephemeral. Context disappears when the conversation ends.
 
-Each human gate has checkboxes:
+Plan files solve that with a very simple convention: checkboxes on the human gate.
 
 ```markdown
 ## Step 1 — Display subscription list (stubbed)
 ...
 **🛑 HUMAN GATE**:
-- [x] Behavioral: ViewModel test passes — list loads with 3 stubbed items
-- [x] Review: Page layout matches Doctor list page pattern
+- [x] Behavioral: ViewModel test passes and the list renders with stubbed data
+- [x] Review: Layout matches the reference feature
 
 ## Step 2 — Wire subscription list to real API
 ...
 **🛑 HUMAN GATE**:
-- [ ] Behavioral: Integration tests pass; GET /api/subscriptions returns list
-- [ ] Review: Entity, repo, query, controller follow Doctors pattern
+- [ ] Behavioral: Integration tests pass and GET /api/subscriptions returns data
+- [ ] Review: Query, repository, and controller follow existing patterns
 ```
 
-When a new session starts — whether with the same AI model or a different one — the agent reads the plan file. It finds the first unchecked `[ ]`. That's Step 2. It knows:
-- Step 1 is done and approved
-- Step 2 is next
-- What files to create, what tests to write, what behaviour to deliver
+When a new session starts, the AI reads the plan and finds the first unchecked box. That is the next step.
 
-No context is lost. No work is repeated. Any agent, in any session, picks up exactly where the last one left off.
+No guesswork. No repeated work. No fragile reliance on chat history.
 
 ---
 
-## Encoding the Process as AI Instructions
+## Encoding the Process into AI Instructions
 
-The entire process described in this article isn't a convention developers must remember. It is **encoded as instruction files** that the AI reads and follows automatically.
+What makes this approach practical is that the workflow is not just a team convention. It is encoded into the repo's instructions, agents, prompts, and skills.
 
-We distribute these files to every project via a centralised template system. But the pattern works with any distribution method — even a shared Git repository that teams copy from.
-
-Here are the key files and what each one teaches the AI:
+That gives the model structure before the conversation even begins.
 
 ### `AGENTS.md` — The Workflow Backbone
 
-This file defines the planning gate, the mandatory workflow rules, the Red-Green-Refactor-Proof loop, the human gate protocol, and the vertical slice decomposition strategy. Every AI agent in the project reads this file.
+This file defines the planning gate, the mandatory workflow rules, the vertical-slice strategy, and the stop points.
 
-Key instructions it contains:
-
-```markdown
-## Mandatory Workflow Rules
-
-1. Show plan before coding.
-2. Steps must be verifiable and testable.
-3. ONE step per reply — never batch multiple steps.
-4. RED before GREEN — write a failing test, confirm it fails, then write production code.
-5. Every bugfix gets a regression test first.
-6. Code analysis before gate — fix all violations, then run the full test suite.
-7. 🛑 STOP at HUMAN GATE — do not proceed until user confirms.
-```
+It is the reason the AI knows that planning comes before coding and that one step must finish before the next begins.
 
 ### `planner.agent.md` — The Planning Specialist
 
-This is a dedicated AI agent that only produces plans. It is constrained to read-only access to the codebase and can only create or edit files under `_plans/`. It cannot write production code, test code, or run builds. Its sole output is a plan file that the developer approves.
+This agent is deliberately constrained. It can read the codebase and produce `_plans/<FeatureName>.md`, but it cannot write production code.
 
-Key instructions it contains:
+That separation matters. Planning is a different task from implementation, and mixing the two is where many AI workflows lose discipline.
 
-```markdown
-<constraints>
-- Only create or edit _plans/<FeatureName>.md. No other files.
-- No production code, test code, SQL, or configuration.
-- No builds, tests, or terminal commands.
-- Read-only on the codebase — explore freely to inform the plan.
-</constraints>
+### `copilot-instructions.md` — Project Rules and Boundaries
 
-<investigate_before_planning>
-Never write a plan step that references a file, class, or pattern you have not read.
-Read the reference feature's implementation across all affected layers BEFORE writing any steps.
-</investigate_before_planning>
-```
+This file tells the AI what kind of system it is working in: project structure, naming rules, dependency boundaries, verification commands, and critical architectural constraints.
 
-The planner also has a self-check that validates the plan before presenting it:
+It answers questions the AI should not answer by improvisation.
 
-```markdown
-<self_check>
-1. Every step name describes user-visible behavior, not a layer or technical artifact.
-2. No two consecutive steps belong to different vertical slices.
-3. Every step has at least one concrete behavioral verification in its HUMAN GATE.
-4. Every step that adds a controller includes integration tests.
-5. All file paths are specific and exist in (or follow) the reference feature's pattern.
-6. No step depends on a later step.
-7. Risk Areas are flagged with ⚠️.
-</self_check>
-```
+### `write-spec.prompt.md` — AI-Assisted Specification Writing
 
-### `copilot-instructions.md` — Project-Specific Rules
+This prompt fills an important gap in the process.
 
-This is the main instruction file that every AI interaction reads. It defines the project structure, naming conventions, dependency matrix, DI registration patterns, and critical rules. It is template-specific — a Blazor Server project gets different instructions than a Blazor WASM project or a class library.
-
-Key instructions it contains:
-
-```markdown
-<critical_rules>
-1. After every code change, run all three:
-   dotnet build src/MySolution.sln
-   {{TestExePath}}
-   dotnet format src/MySolution.sln --verify-no-changes
-
-2. Never throw for business errors — use Result<T>.
-
-3. DI via *Module + Scrutor suffix scanning only. Never services.AddScoped<T>() in Program.cs.
-
-4. AsNoTracking() on all read queries. No N+1 patterns.
-
-5. Match existing patterns in the same layer/feature before writing new code.
-
-6. Follow the Mandatory Workflow Rules — one step per reply, RED before GREEN,
-   stop at every HUMAN GATE.
-</critical_rules>
-```
+Before planning, it interviews the developer section by section and produces `_specs/<FeatureName>.md` from the spec template. It turns a vague idea into something concrete enough to plan safely.
 
 ### `build-feature/SKILL.md` — The Execution Engine
 
-This is the skill file that the AI invokes when executing plan steps. It contains layer-specific code templates — not as copy-paste targets, but as a reference catalog. The AI looks up which layers the current step touches and applies the matching template, adapted to the reference feature's patterns.
+This skill tells the AI how to execute an approved plan step using the right layer patterns and proof loop. It does not replace judgement, but it gives the model reliable rails.
 
-Key guidance it contains:
+### Supporting Project-Level Folders
 
-```markdown
-## Vertical Slice Strategy
+The wider workflow also benefits from a small set of project-level folders with clear intent:
 
-Plans decompose features into vertical slices, not horizontal layers.
-Each slice follows a two-phase pattern:
+- `_specs/` for feature specifications
+- `_plans/` for approved implementation plans
+- `_decisions/` for ADRs and architectural choices
+- `_qa/` for smoke-test plans and QA artifacts
+- `_infrastructure/` for infrastructure specs and environment records
 
-1. **Stub phase** — Build the UI with a mocked/stubbed service returning fake data.
-   This lets the user validate the UI immediately.
-2. **Wire phase** — Replace the stub with real production code from top to bottom:
-   controller → application handler → domain → persistence → DB.
-
-When executing a plan step, check whether it is a stub step or a wire step,
-and apply the appropriate layers from the reference catalog below.
-```
-
-### `bugfix.agent.md` — The Regression-First Specialist
-
-A dedicated agent for small fixes that enforces the regression test requirement:
-
-```markdown
-## Workflow
-
-1. Investigate — read the code, identify the root cause.
-2. RED — write a test that reproduces the bug. Confirm it FAILS.
-   Do not write any production code yet.
-3. GREEN — make the minimal fix. Confirm the test PASSES.
-4. Verify — full build + test suite + format check.
-
-Rules:
-- Never skip the regression test. RED before GREEN.
-- Never change more than 2 production files. Escalate to @planner if larger.
-- Never refactor surrounding code — fix the bug only.
-```
+None of these are complicated. Their value comes from being explicit, predictable, and easy for both humans and AI to discover.
 
 ---
 
 ## Putting It All Together
 
-The complete workflow looks like this:
+At a high level, the workflow looks like this:
 
-```
-Developer: "I need a subscriptions feature for patients."
-
-     ┌─────────────────────────────────────┐
-     │  1. SPECIFY                          │
-     │  Write _specs/Subscriptions.md       │
-     │  Define: stories, criteria, model,   │
-     │  endpoints, rules, edge cases,       │
-     │  out-of-scope                        │
-     └──────────────┬──────────────────────┘
-                    │
-                    ▼
-     ┌─────────────────────────────────────┐
-     │  2. PLAN                             │
-     │  AI reads spec + codebase            │
-     │  AI asks clarifying questions        │
-     │  AI writes _plans/Subscriptions.md   │
-     │  4 steps: stub→wire × 2 slices      │
-     │  🛑 Developer approves plan          │
-     └──────────────┬──────────────────────┘
-                    │
-          ┌─────────┴─────────┐
-          │                    │
-          ▼                    ▼
-     ┌──────────┐        ┌──────────┐
-     │ Step 1   │        │ Step 3   │
-     │ List UI  │        │ Form UI  │
-     │ (stub)   │        │ (stub)   │
-     └────┬─────┘        └────┬─────┘
-          │                    │
-          ▼                    ▼
-     ┌──────────┐        ┌──────────┐
-     │ Step 2   │        │ Step 4   │
-     │ List API │        │ Create   │
-     │ (wire)   │        │ API      │
-     └────┬─────┘        │ (wire)   │
-          │              └────┬─────┘
-          │                    │
-          └────────┬───────────┘
-                   │
-                   ▼
-          Each step follows:
-          RED → GREEN → REFACTOR
-          → ANALYSE → PROVE → 🛑
+```text
+Idea -> Spec -> Plan -> Step 1 -> Review -> Step 2 -> Review -> Step 3 -> Review -> Step 4 -> Review
 ```
 
-At every 🛑, the developer reviews:
-- Do the tests cover the spec's acceptance criteria?
-- Does the code follow the reference feature's patterns?
-- Are the naming conventions consistent?
-- Are risk areas properly handled?
+More concretely:
 
-Only after approval does the next step begin. The developer stays in control of every design decision while the AI handles the mechanical work of writing code that conforms to established patterns.
+1. A developer identifies a feature.
+2. The AI helps write the spec through a focused Q&A session.
+3. The planner reads the spec and the codebase, then proposes a vertical-slice plan.
+4. The developer approves the plan.
+5. The AI implements one step at a time using Red-Green-Refactor.
+6. After each step, the AI proves the result and stops for review.
+7. The plan file tracks progress across sessions.
+
+This keeps the developer in control of design while still capturing the speed benefits of AI-assisted implementation.
 
 ---
 
@@ -732,21 +660,28 @@ Only after approval does the next step begin. The developer stays in control of 
 
 | Aspect | Vibe Coding | Spec-Driven Development |
 |--------|-------------|------------------------|
-| **Starting point** | Vague prompt | Structured spec with acceptance criteria |
-| **Planning** | None — AI decides scope and approach | Explicit plan with vertical slices, approved before coding |
-| **Decomposition** | Random or by layer | By user-visible behaviour (stub → wire) |
-| **Testing** | Maybe, after the fact | RED-first — test must fail before code is written |
-| **Verification** | Eyeball check | Build + tests + analysis + format — automated and mandatory |
-| **Human involvement** | Rubber-stamp at the end | Gate at every step — developer reviews and approves |
-| **Session continuity** | Lost on restart | Checkbox tracking in plan files |
-| **Accountability** | Unclear — who designed this? | Developer owns spec and plan; AI executes |
+| Starting point | Vague prompt | Structured spec |
+| Planning | None or implicit | Explicit plan approved before coding |
+| Decomposition | Ad hoc or by layer | By user-visible behaviour |
+| Testing | Optional or late | RED-first and mandatory |
+| Verification | Eyeballing the output | Build, tests, analysis, format |
+| Human involvement | Mostly at the end | At every gate |
+| Session continuity | Fragile | Tracked in `_plans/` |
+| Accountability | Diffuse | Clear: human owns intent, AI executes |
 
-The shift from vibe coding to spec-driven development is not about writing more documents. It's about **staying in control** of software you're responsible for. The spec makes intent explicit. The plan makes decomposition deliberate. Red-Green-Refactor makes every change verifiable. And human gates make the developer accountable for every step.
+The shift from vibe coding to spec-driven development is not about producing more documents. It is about preserving control.
 
-AI coding assistants are powerful. But power without control is just risk. Spec-driven development is how you keep the power and add the control.
+The spec makes intent explicit.
+The plan makes execution deliberate.
+Red-Green-Refactor makes each change verifiable.
+Human gates keep the developer accountable.
+
+AI is most useful when it accelerates a process you already trust. Without that process, speed just multiplies ambiguity.
+
+With it, you get the best of both worlds: faster delivery and stronger control.
 
 ---
 
-*This article describes practices encoded in the [copilot-sync](https://github.com/nickaerts/copilot-sync) project, which distributes AI coding instructions as versioned templates across .NET projects.*
+*The practices described in this article are encoded in the open-source [github-copilot-configs](https://github.com/geobarteam/github-copilot-configs) repository — a reusable template library of GitHub Copilot and Claude Code configuration files for .NET projects.*
 
-> **Previous:** [Part 1 — Best Practices for AI-Assisted Coding with GitHub Copilot](BLOGPOST.md)
+> **Previous:** [Part 1 — Best Practices for AI-Assisted Coding](BLOGPOST.md)
