@@ -6,7 +6,7 @@ applyTo: "src/Host/Client/**"
 
 ## Controller Structure
 
-Location: `src/Host/Client/Controllers/<Feature>Controller.cs`
+Location: `src/Host/Api/Controllers/<Feature>Controller.cs`
 
 Controllers are thin — they delegate to Application queries/commands and map results to HTTP.
 
