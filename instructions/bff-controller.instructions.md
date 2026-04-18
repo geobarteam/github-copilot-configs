@@ -90,12 +90,7 @@ public async Task<ActionResult<ResultDto<Unit>>> CreateAppointment(
 ## Rules
 
 - Controllers are **thin** — no business logic, no direct DB access.
-- Every action includes **audit logging** via `IAuditLogger` + `GdprAuditLog`.
-- Correlation ID from `ICorrelationContextAccessor` (fallback to `Guid.NewGuid()`).
-- User context from `IUserContextAccessor` for GDPR audit trail.
 - **CancellationToken** on every action as the last parameter.
-- Log exceptions with structured logging (`{Controller}` placeholder).
-- DTOs live in `Contracts/<Feature>/Api/` — not in the Host project.
 
 ## Forbidden
 
