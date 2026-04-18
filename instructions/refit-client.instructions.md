@@ -9,34 +9,35 @@ applyTo: "src/Presentation/**/ServiceClients/**,src/Presentation/**/Services/**,
 ## Architecture
 
 ```
-Razor Page → ViewModel → IFeatureService → IFeatureServiceClient (Refit) → CookieHandler → Client API
+Razor Page → ViewModel → I<Feature>ServiceClient → I<Feature>Client (Refit) → CookieHandler → Client API
 ```
 
-- **Refit interfaces** call the Client API controllers.
+- **Refit interfaces** (`I<Feature>Client`) call the Client API controllers.
 - **CookieHandler** attaches the session cookie (`credentials: include`) and `X-XSRF-TOKEN` header on mutating requests.
-- **Feature Services** wrap the Refit client, map `DTO → Model`, and return `Result<T>` for error handling.
+- **Feature ServiceClients** (`I<Feature>ServiceClient`) wrap the Refit client, map `DTO → Model`, and return `Result<T>` for error handling.
 
 ## File Locations
 
 | Kind | Location | Naming |
 |------|----------|--------|
-| Refit interface | `Presentation/Shared/ServiceClients/Bff/I<Feature>ServiceClient.cs` | `I<Feature>ServiceClient` |
-| Feature service interface | `Presentation/<Feature>/Services/I<Feature>Service.cs` | `I<Feature>Service` |
-| Feature service impl | `Presentation/<Feature>/Services/<Feature>Service.cs` | `<Feature>Service` |
+| Refit interface | `Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs` | `I<Feature>Client` |
+| ServiceClient interface | `Presentation/<Feature>/ServiceClients/I<Feature>ServiceClient.cs` | `I<Feature>ServiceClient` |
+| ServiceClient impl | `Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs` | `<Feature>ServiceClient` |
 | Model | `Presentation/<Feature>/Models/<Name>Model.cs` | `<Name>Model` |
 | DTO (shared) | `Contracts/<Feature>/<Name>Dto.cs` | `<Name>Dto` (record) |
 
-## 1. Refit Service Client Interface
+## 1. Refit Client Interface
 
-Reference: `IDoctorServiceClient.cs`
+Location: `Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs`  
+Reference: `IDoctorClient.cs`
 
 ```csharp
-namespace {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff;
+namespace {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff.Clients;
 
 using {{NamespaceRoot}}.Contracts.<Feature>;
 using Refit;
 
-public interface I<Feature>ServiceClient
+public interface I<Feature>Client
 {
     [Get("/api/<feature>")]
     Task<List<<Feature>Dto>> GetAllAsync(CancellationToken cancellationToken = default);
@@ -66,7 +67,7 @@ public interface I<Feature>ServiceClient
 After creating a new Refit interface, register it in `BffServiceClients.AddBffServiceClients()`:
 
 ```csharp
-services.AddRefitClientWithCookies<I<Feature>ServiceClient>(baseAddress);
+services.AddRefitClientWithCookies<I<Feature>Client>(baseAddress);
 ```
 
 This is the **only** registration needed. The private `AddRefitClientWithCookies<T>` method:
@@ -85,19 +86,20 @@ The token is populated by `BffAuthenticationStateProvider` from the Cfe's user e
 
 **Never bypass or replace this handler.** All Refit clients go through it automatically via `AddRefitClientWithCookies`.
 
-## 4. Feature Service (DTO → Model Mapping)
+## 4. Feature ServiceClient (DTO → Model Mapping)
 
-Reference: `DoctorsService.cs`
+Location: `Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs`  
+Reference: `DoctorsServiceClient.cs`
 
 ```csharp
-namespace {{NamespaceRoot}}.Presentation.<Feature>.Services;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.ServiceClients;
 
 using {{NamespaceRoot}}.Core.Functional;
 using {{NamespaceRoot}}.Contracts.<Feature>;
 using {{NamespaceRoot}}.Presentation.<Feature>.Models;
-using {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff;
+using {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff.Clients;
 
-public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Service
+public class <Feature>ServiceClient(I<Feature>Client client) : I<Feature>ServiceClient
 {
     public async Task<List<<Feature>Model>> GetAll()
     {
@@ -116,11 +118,11 @@ public class <Feature>Service(I<Feature>ServiceClient client) : I<Feature>Servic
 
 ### Rules
 
-- Constructor-inject the Refit interface. Use primary constructor syntax.
-- Map DTO → Model in the service. ViewModels never see DTOs.
+- Constructor-inject the Refit interface (`I<Feature>Client`). Use primary constructor syntax.
+- Map DTO → Model in the ServiceClient. ViewModels never see DTOs.
 - Return `Result<T>` for operations that can fail with business errors.
 - Return plain collections for read operations.
-- **No registration needed** — Scrutor auto-registers classes ending in `Service` as transient via `PresentationModule`.
+- **No registration needed** — Scrutor auto-registers classes ending in `ServiceClient` as transient via `PresentationModule`.
 
 ## 5. Model
 
@@ -153,6 +155,6 @@ In ViewModels, errors are caught in `try/catch` and routed to `_errorComponent.P
 | Register Refit clients manually in `Program.cs` | Add to `BffServiceClients.AddBffServiceClients()` |
 | Skip `CancellationToken` on Refit methods | Always include as last param with `= default` |
 | Return DTOs from feature services | Map DTO → Model in the service |
-| Inject Refit clients into ViewModels | Inject the `I<Feature>Service` wrapper |
+| Inject Refit clients into ViewModels | Inject the `I<Feature>ServiceClient` wrapper |
 | Create a new `HttpClient` or `DelegatingHandler` | Use the existing `CookieHandler` pipeline |
 | Store or forward tokens manually | `CookieHandler` + `IAntiforgeryTokenStore` handles this |

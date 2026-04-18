@@ -59,7 +59,7 @@ public record <Entity>DetailDto(int Id, string Name, ...);
 
 Add to existing controller in `src/Host/Client/Controllers/`. Inject the new query in the constructor. Pattern: execute query → null check (`NotFound()`) → audit log → map to DTO → `Ok(dto)`. Always include `CancellationToken` and `try/catch` with structured logging.
 
-> Full pattern (GET action, audit logging): see `bff-controller.instructions.md`.
+> Full pattern (GET action, audit logging): see `api-controller.instructions.md`.
 
 ### 5. Refit Client Method
 
@@ -121,7 +121,7 @@ Location: `src/Core/Application/Functionalities/<Feature>/Commands/<Action>/`
 
 Add to existing controller in `src/Host/Client/Controllers/`. Use `_auditLogger.LogActionAsync<Unit>()` wrapping the command execution. Map `Result<T>` to HTTP: `!IsSuccess` → `BadRequest(error)`, success → `Ok()`.
 
-> Full pattern (POST/PUT/DELETE, audit logging): see `bff-controller.instructions.md`.
+> Full pattern (POST/PUT/DELETE, audit logging): see `api-controller.instructions.md`.
 
 
 ---

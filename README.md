@@ -47,7 +47,7 @@ Layer-specific conventions that **auto-activate** when you edit files matching t
 | `domain-entity` | `src/Core/Domain/**` |
 | `application-layer` | `src/Core/Application/**` |
 | `persistence-layer` | `src/Core/Persistence/**` |
-| `bff-controller` | `src/Host/Client/**` |
+| `api-controller` | `src/Host/Client/**` |
 | `blazor-presentation` | `src/Presentation/**` |
 | `refit-client` | `src/Presentation/**/ServiceClients/**`, `src/Infrastructure/Http/**` |
 | `tests` | `src/Test/**` |

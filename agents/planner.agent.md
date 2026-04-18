@@ -22,7 +22,7 @@ When the user describes a feature or change, gather enough context before planni
 
 1. **Check for a spec**: Look for `_specs/<FeatureName>.md` at the repo root. If one exists, read it — it contains user stories, acceptance criteria, data model, and business rules. Use it as the primary input for your plan.
 2. **Understand the request**: What is the user story or change? Who benefits?
-3. **Find the reference feature**: Identify the closest existing feature to use as a pattern. **Do not assume a default** — if the spec or the user's request does not mention a reference feature, **ask the user**: *"Which existing feature in your codebase should I use as the reference pattern?"* List the features you can see under `src/Core/Domain/Functionalities/`, `src/Presentation/`, or `src/Host/BFF/Controllers/` to help them pick. Once identified, read its implementation across all layers before writing the plan.
+3. **Find the reference feature**: Identify the closest existing feature to use as a pattern. **Do not assume a default** — if the spec or the user's request does not mention a reference feature, **ask the user**: *"Which existing feature in your codebase should I use as the reference pattern?"* List the features you can see under `src/Core/Domain/Functionalities/`, `src/Presentation/`, or `src/Host/Client/Controllers/` to help them pick. Once identified, read its implementation across all layers before writing the plan.
 4. **Identify scope**: Which layers are affected? Use the project structure and dependency matrix from `copilot-instructions.md`.
 5. **Identify Risk Areas**: Flagged in copilot-instructions.md under Scope & Boundaries. Check which apply and mark them with ⚠️ in the plan.
 

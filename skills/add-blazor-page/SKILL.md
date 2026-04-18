@@ -1,6 +1,6 @@
 ---
 name: add-blazor-page
-description: "Use when adding a new Blazor page, dialog, or ViewModel to MyApp Presentation layer. Covers ViewModel interface + implementation, ServiceClient, Refit client method, Model record, .razor page with code-behind, MudBlazor components, localization, and error handling. Use for: new pages, new dialogs, new list/detail views, new forms."
+description: "Use when adding a new Blazor page, dialog, or ViewModel to {{SolutionName}} Presentation layer. Covers ViewModel interface + implementation, ServiceClient, Refit client method, Model record, .razor page with code-behind, MudBlazor components, localization, and error handling. Use for: new pages, new dialogs, new list/detail views, new forms."
 argument-hint: "Describe the page, e.g. 'list page for prescriptions with search and add dialog'"
 ---
 
@@ -42,7 +42,7 @@ DI: ViewModels auto-registered by `PresentationModule` (suffix `ViewModel` → T
 ## Model
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.Models;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.Models;
 
 // Read model (immutable)
 public record <Entity>Model(string Name, string Email);
@@ -65,10 +65,10 @@ public class Add<Entity>Model
 ## ViewModel Interface
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.ViewModels;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
 
-using MyApp.Presentation.<Feature>.Models;
-using MyApp.Presentation.Shared;
+using {{NamespaceRoot}}.Presentation.<Feature>.Models;
+using {{NamespaceRoot}}.Presentation.Shared;
 
 public interface I<Feature>ViewModel : IViewModel
 {
@@ -82,11 +82,11 @@ public interface I<Feature>ViewModel : IViewModel
 ## ViewModel Implementation
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.ViewModels;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
 
-using MyApp.Presentation.<Feature>.Models;
-using MyApp.Presentation.<Feature>.ServiceClients;
-using MyApp.Presentation.Shared;
+using {{NamespaceRoot}}.Presentation.<Feature>.Models;
+using {{NamespaceRoot}}.Presentation.<Feature>.ServiceClients;
+using {{NamespaceRoot}}.Presentation.Shared;
 
 public class <Feature>ViewModel(I<Feature>ServiceClient serviceClient) : I<Feature>ViewModel
 {
@@ -125,12 +125,12 @@ public class <Feature>ViewModel(I<Feature>ServiceClient serviceClient) : I<Featu
 ## Dialog ViewModel (for add/edit forms)
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.ViewModels;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
 
 using System.ComponentModel.DataAnnotations;
-using MyApp.Presentation.<Feature>.ServiceClients;
-using MyApp.Presentation.Resources.<Feature>;
-using MyApp.Presentation.Shared;
+using {{NamespaceRoot}}.Presentation.<Feature>.ServiceClients;
+using {{NamespaceRoot}}.Presentation.Resources.<Feature>;
+using {{NamespaceRoot}}.Presentation.Shared;
 
 public class Dialog<Action><Entity>ViewModel(
     I<Feature>ServiceClient serviceClient,
@@ -183,11 +183,11 @@ public class Dialog<Action><Entity>ViewModel(
 ## ServiceClient
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.ServiceClients;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.ServiceClients;
 
-using MyApp.Presentation.<Feature>.Models;
-using MyApp.Presentation.Shared.ServiceClients.Bff;
-using MyApp.Presentation.Shared.ServiceClients.Bff.Clients;
+using {{NamespaceRoot}}.Presentation.<Feature>.Models;
+using {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff;
+using {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff.Clients;
 
 public class <Feature>ServiceClient(I<Feature>Client client) : I<Feature>ServiceClient
 {
@@ -228,7 +228,7 @@ public class <Feature>ServiceClient(I<Feature>Client client) : I<Feature>Service
 Add methods to `src/Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs`:
 
 ```csharp
-namespace MyApp.Presentation.Shared.ServiceClients.Bff.Clients;
+namespace {{NamespaceRoot}}.Presentation.Shared.ServiceClients.Bff.Clients;
 
 using Refit;
 
@@ -258,7 +258,7 @@ public interface I<Feature>Client
 
 ```html
 @page "/<feature-kebab>"
-@using MyApp.Presentation.<Feature>.Models
+@using {{NamespaceRoot}}.Presentation.<Feature>.Models
 
 <PageTitle>@Localizer["PageTitle"]</PageTitle>
 
@@ -293,13 +293,13 @@ else
 ### `<Feature>.razor.cs` (code-behind)
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.Pages;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.Pages;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
-using MyApp.Presentation.<Feature>.ViewModels;
-using MyApp.Presentation.Shared;
+using {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
+using {{NamespaceRoot}}.Presentation.Shared;
 
 public partial class <Feature>
 {
@@ -381,13 +381,13 @@ public partial class <Feature>
 ### `Dialog<Action>.razor.cs`
 
 ```csharp
-namespace MyApp.Presentation.<Feature>.Pages;
+namespace {{NamespaceRoot}}.Presentation.<Feature>.Pages;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
-using MyApp.Presentation.<Feature>.ViewModels;
+using {{NamespaceRoot}}.Presentation.<Feature>.ViewModels;
 
 public partial class Dialog<Action>
 {

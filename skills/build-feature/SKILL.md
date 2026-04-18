@@ -57,7 +57,7 @@ The plan file is a **living document**. Track progress using the HUMAN GATE chec
 
 ### Step 1 — Domain Entity
 
-Location: `src/Core/Domain/Shared/Entities/<Entity>.cs`
+Location: `src/Core/Domain/Functionalities/<Feature>/<Entity>.cs`
 
 Plain C# class implementing `IEntity` (`int Id { get; set; }`). No EF attributes, no dependencies.
 
@@ -69,7 +69,7 @@ Test: construction + property assignment.
 
 ### Step 2 — Repository Interface + Implementation
 
-**Interface**: `src/Core/Application/Shared/Interfaces/Persistence/Repositories/I<Entity>Repository.cs` — extends `IRepository<<Entity>>` with feature-specific methods.
+**Interface**: `src/Core/Application/Functionalities/<Feature>/I<Entity>Repository.cs` — extends `IRepository<<Entity>>` with feature-specific methods.
 
 **Implementation**: `src/Core/Persistence/Repositories/<Entity>Repository.cs` — extends `BaseRepository<<Entity>>`, uses `AsNoTracking()` for reads.
 
@@ -124,7 +124,7 @@ Location: `src/Host/Client/Controllers/<Feature>Controller.cs`
 - POST: execute command → `Result<T>` → `BadRequest(error)` or `Ok()`. Audit via `LogActionAsync`.
 - Every action: `CancellationToken` as last param, `try/catch` with structured logging.
 
-> Full patterns (GET/POST/PUT/DELETE, audit logging): see `bff-controller.instructions.md`.
+> Full patterns (GET/POST/PUT/DELETE, audit logging): see `api-controller.instructions.md`.
 
 Test: `Test/Integration/Endpoints/` — HTTP tests with `CustomWebApplicationFactory`.
 

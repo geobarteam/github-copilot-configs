@@ -30,7 +30,7 @@ Target projects: ASP.NET + Blazor + Worker solutions using Onion/Screaming Archi
 │   ├── smoke-test.agent.md      # Post-deployment smoke testing (Playwright)
 ├── instructions/
 │   ├── application-layer.instructions.md   # src/Core/Application/**
-│   ├── bff-controller.instructions.md      # src/Host/BFF/**
+│   ├── api-controller.instructions.md      # src/Host/Client/**
 │   ├── blazor-presentation.instructions.md # src/Presentation/**
 │   ├── domain-entity.instructions.md       # src/Core/Domain/**
 │   ├── persistence-layer.instructions.md   # src/Core/Persistence/**

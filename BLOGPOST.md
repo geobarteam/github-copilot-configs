@@ -197,7 +197,7 @@ Instruction files activate automatically when you edit files matching their `app
 | `domain-entity` | `src/Core/Domain/**` |
 | `application-layer` | `src/Core/Application/**` |
 | `persistence-layer` | `src/Core/Persistence/**` |
-| `bff-controller` | `src/Host/Client/**` |
+| `api-controller` | `src/Host/Client/**` |
 | `blazor-presentation` | `src/Presentation/**` |
 | `refit-client` | `src/Presentation/**/ServiceClients/**` |
 | `tests` | `src/Test/**` |

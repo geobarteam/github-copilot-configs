@@ -5,7 +5,7 @@ tools: ["read", "edit", "search", "execute", "todo", "agent"]
 ---
 # New Vertical Slice Feature
 
-You are building a new feature end-to-end in the MyApp project. Follow the **Canonical Recipe (§9)** from copilot-instructions.md — one Red → Green → Refactor cycle per step.
+You are building a new feature end-to-end in the {{SolutionName}} project. Follow the **Canonical Recipe (§9)** from copilot-instructions.md — one Red → Green → Refactor cycle per step.
 
 ## Input
 
@@ -14,15 +14,15 @@ Ask for any additional details if not provided: entity properties, relationships
 
 ## Before You Start
 
-1. **Identify the reference feature** — ask the user which existing feature in the codebase to use as the pattern. If the user doesn't specify one, list the features visible under `src/Core/Domain/Functionalities/`, `src/Client/`, or `src/Host/BFF/Controllers/` and let them pick. Then read its implementation across all layers:
-   - `Core/Domain/Shared/Entities/<ReferenceEntity>.cs`
+1. **Identify the reference feature** — ask the user which existing feature in the codebase to use as the pattern. If the user doesn't specify one, list the features visible under `src/Core/Domain/Functionalities/`, `src/Presentation/`, or `src/Host/Client/Controllers/` and let them pick. Then read its implementation across all layers:
+   - `Core/Domain/Functionalities/<ReferenceFeature>/<ReferenceEntity>.cs`
    - `Core/Application/Functionalities/<ReferenceFeature>/` (all files)
    - `Core/Persistence/Repositories/<ReferenceEntity>Repository.cs`
    - `Contracts/<ReferenceFeature>/<ReferenceEntity>Dto.cs`
-   - `Host/BFF/Controllers/<ReferenceEntity>Controller.cs`
-   - `Client/Shared/ServiceClients/Bff/I<ReferenceEntity>ServiceClient.cs`
-   - `Client/<ReferenceFeature>/` (all files: Services, ViewModels, Models, Pages)
-   - `Test/Unit/Client/<ReferenceFeature>/` (all tests)
+   - `Host/Client/Controllers/<ReferenceEntity>Controller.cs`
+   - `Presentation/Shared/ServiceClients/Bff/Clients/I<ReferenceEntity>Client.cs`
+   - `Presentation/<ReferenceFeature>/` (all files: ServiceClients, ViewModels, Models, Pages)
+   - `Test/Unit/` (all tests for this feature)
 
 2. **Create `_plans/<FeatureName>.md`** at the repo root (e.g. `_plans/MyPrescriptions.md`) using this template:
 
@@ -30,56 +30,56 @@ Ask for any additional details if not provided: entity properties, relationships
 # Plan: Add <Feature> Feature (Vertical Slice)
 
 ## Step 1 — Domain Entity
-**Scope**: `Core/Domain/Shared/Entities/<Feature>.cs`
+**Scope**: `Core/Domain/Functionalities/<Feature>/<Feature>.cs`
 **RED**: `Test/Unit/Domain/<Feature>Tests.cs` — construction + property tests
 **GREEN**: Plain C# class `: IEntity`. Properties: Id + <user-specified properties>.
 **REFACTOR**: none expected.
 
 ## Step 2 — Repository + Query + Command
-**Scope**: `Core/Application/Shared/Interfaces/Persistence/Repositories/I<Feature>Repository.cs`,
+**Scope**: `Core/Application/Functionalities/<Feature>/I<Feature>Repository.cs`,
   `Core/Persistence/Repositories/<Feature>Repository.cs`,
   `Core/Application/Functionalities/<Feature>/Queries/Get<Feature>s/IGet<Feature>sQuery.cs`,
   `Core/Application/Functionalities/<Feature>/Queries/Get<Feature>s/Get<Feature>sQuery.cs`,
-  `Core/Application/Functionalities/<Feature>/Handlers/Add<Feature>/Add<Feature>Command.cs`,
-  `Core/Application/Functionalities/<Feature>/Handlers/Add<Feature>/Add<Feature>CommandHandler.cs`
+  `Core/Application/Functionalities/<Feature>/Commands/Add<Feature>/Add<Feature>Command.cs`,
+  `Core/Application/Functionalities/<Feature>/Commands/Add<Feature>/Add<Feature>CommandHandler.cs`
 **RED**: `Test/Unit/Application/<Feature>/Get<Feature>sQueryTests.cs` — mock repo, assert list returned
   `Test/Unit/Application/<Feature>/Add<Feature>CommandHandlerTests.cs` — success + duplicate-name error
 **GREEN**: Implement repo (`: BaseRepository<T>`), query, and command handler.
 **REFACTOR**: none expected.
 
 ## Step 3 — Contracts (DTOs)
-**Scope**: `Contracts/<Feature>s/<Feature>Dto.cs`, `Contracts/<Feature>s/Add<Feature>Dto.cs`
+**Scope**: `Contracts/<Feature>/<Feature>Dto.cs`, `Contracts/<Feature>/Add<Feature>Dto.cs`
 **RED**: construction test in existing handler test file (assert DTO records can be created).
 **GREEN**: `record <Feature>Dto(int Id, string Name)`, `record Add<Feature>Dto { [Required] string Name }`.
 **REFACTOR**: none expected.
 
-## Step 4 — Bff Controller
-**Scope**: `Host/BFF/Controllers/<Feature>Controller.cs`
-**RED**: (tested indirectly at service/UI level; write a DTO mapping assertion in handler test if needed)
+## Step 4 — API Controller
+**Scope**: `Host/Client/Controllers/<Feature>Controller.cs`
+**RED**: (tested indirectly via integration test; write a DTO mapping assertion in handler test if needed)
 **GREEN**: `[ApiController][Authorize][Route("api/[controller]")]`. GET → query, POST → command handler.
   Use `[ApiAntiforgery]` on POST/PUT/DELETE/PATCH.
 **REFACTOR**: none expected.
 
-## Step 5 — Refit Client + Feature Service + Model
-**Scope**: `Client/Shared/ServiceClients/Bff/I<Feature>ServiceClient.cs`,
-  `Client/<Feature>s/Services/I<Feature>sService.cs`,
-  `Client/<Feature>s/Services/<Feature>sService.cs`,
-  `Client/<Feature>s/Models/<Feature>Model.cs`
-**RED**: `Test/Unit/Client/<Feature>s/Services/<Feature>sServiceTest.cs` — mock Refit client, assert DTO→Model mapping
-**GREEN**: Refit interface (GET/POST), service maps DTO→Model, register client in `BffServiceClients.AddBffServiceClients()`.
+## Step 5 — Refit Client + ServiceClient + Model
+**Scope**: `Presentation/Shared/ServiceClients/Bff/Clients/I<Feature>Client.cs`,
+  `Presentation/<Feature>/ServiceClients/I<Feature>ServiceClient.cs`,
+  `Presentation/<Feature>/ServiceClients/<Feature>ServiceClient.cs`,
+  `Presentation/<Feature>/Models/<Feature>Model.cs`
+**RED**: `Test/Unit/<Feature>/ServiceClients/<Feature>ServiceClientTests.cs` — mock Refit client, assert DTO→Model mapping
+**GREEN**: Refit interface (GET/POST), ServiceClient maps DTO→Model, register client in `BffServiceClients.AddBffServiceClients()`.
 **REFACTOR**: none expected.
 
 ## Step 6 — ViewModel
-**Scope**: `Client/<Feature>s/ViewModels/I<Feature>sViewModel.cs`,
-  `Client/<Feature>s/ViewModels/<Feature>sViewModel.cs`
-**RED**: `Test/Unit/Client/<Feature>s/ViewModels/<Feature>sViewModelTest.cs` — InitializeAsync, Add<Feature>
-**GREEN**: Inject service + ISnackbar + AuthenticationStateProvider. IsBusy + InitializeAsync + Add<Feature>.
+**Scope**: `Presentation/<Feature>/ViewModels/I<Feature>ViewModel.cs`,
+  `Presentation/<Feature>/ViewModels/<Feature>ViewModel.cs`
+**RED**: `Test/Unit/<Feature>/ViewModels/<Feature>ViewModelTests.cs` — InitializeAsync, Add<Feature>
+**GREEN**: Inject ServiceClient. IsBusy + InitializeAsync + Add<Feature>.
 **REFACTOR**: none expected.
 
 ## Step 7 — Razor Page + bUnit Test
-**Scope**: `Client/<Feature>s/Pages/<Feature>sPage.razor`,
-  `Client/<Feature>s/Pages/<Feature>sPage.razor.cs`
-**RED**: `Test/UI/<Feature>s/Pages/<Feature>sPageTests.cs` — render with mock ViewModel, assert content appears
+**Scope**: `Presentation/<Feature>/Pages/<Feature>Page.razor`,
+  `Presentation/<Feature>/Pages/<Feature>Page.razor.cs`
+**RED**: `Test/UI/<Feature>/Pages/<Feature>PageTests.cs` — render with mock ViewModel, assert content appears
 **GREEN**: MudDataGrid bound to ViewModel. MudForm for add. @attribute [Authorize].
 **REFACTOR**: Add localization resource file if needed.
 ```

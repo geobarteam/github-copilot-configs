@@ -20,7 +20,7 @@ Onion/Screaming Architecture, CQRS-lite.
 1. After every code change, run all three:
 ```
 dotnet build src/<MySolutionName>.sln
-dotnet test --project src/Test/Unit/
+{{TestExePath}}
 dotnet format src/<MySolutionName>.sln --verify-no-changes
 ```
 
@@ -263,10 +263,8 @@ Before answering questions about the codebase, read the relevant files first. Ne
 ```powershell
 dotnet build src/MySolutionName.sln                # Build
 dotnet restore src/MySolutionName.sln              # Restore (NuGet sources configured at user level)
-dotnet test --project src/Test/Unit/                 # Unit tests
-dotnet test --project src/Test/Integration/          # Integration tests
-dotnet test --project src/Test/UI/                   # bUnit component tests
-dotnet test --project src/Test/Unit/ --filter "<Class>" # Filtered
+{{TestExePath}}                                    # All tests
+{{TestExePath}} --filter "<Class>"                 # Filtered
 dotnet format src/MySolutionName.sln --verify-no-changes  # Format check
 ```
 

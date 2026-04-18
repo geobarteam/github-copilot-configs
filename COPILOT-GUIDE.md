@@ -31,7 +31,7 @@ This guide teaches you how to use the Copilot customizations shipped under `.git
 │   ├── domain-entity.instructions.md    # Auto-loaded when editing src/Core/Domain/**
 │   ├── application-layer.instructions.md # Auto-loaded when editing src/Core/Application/**
 │   ├── persistence-layer.instructions.md # Auto-loaded when editing src/Core/Persistence/**
-│   ├── bff-controller.instructions.md   # Auto-loaded when editing src/Host/BFF/**
+│   ├── api-controller.instructions.md   # Auto-loaded when editing src/Host/Client/**
 │   └── blazor-presentation.instructions.md # Auto-loaded when editing Presentation pages/ViewModels
 ├── agents/
 │   ├── planner.agent.md                 # @planner — creates _plans/<Name>.md, never writes code
@@ -261,7 +261,7 @@ Visual Studio loads `copilot-instructions.md` automatically, **and** loads scope
 | `src/Core/Domain/**` | `domain-entity.instructions.md` | `IEntity`, plain C#, no EF attributes |
 | `src/Core/Application/**` | `application-layer.instructions.md` | Commands, handlers, queries, `Result<T>` |
 | `src/Core/Persistence/**` | `persistence-layer.instructions.md` | `BaseRepository<T>`, `IEntityTypeConfiguration<T>` |
-| `src/Host/BFF/**` | `bff-controller.instructions.md` | Controller pattern, audit logging |
+| `src/Host/Client/**` | `api-controller.instructions.md` | Controller pattern, audit logging |
 | Presentation pages/ViewModels | `blazor-presentation.instructions.md` | ViewModel lifecycle, MudBlazor, `IsBusy` guard |
 | `src/Test/**` | `tests.instructions.md` | MSTest, AAA, Moq, integration test factory |
 | ServiceClients/Services | `refit-client.instructions.md` | Refit patterns, DTO→Model mapping |
@@ -373,7 +373,7 @@ These load automatically when you edit files matching their `applyTo` pattern:
 | `domain-entity.instructions.md` | Any file in `src/Core/Domain/**` | Entity conventions, `IEntity`, plain C#, no EF attributes |
 | `application-layer.instructions.md` | Any file in `src/Core/Application/**` | Commands, handlers, queries, `Result<T>`, `IMessagingService` |
 | `persistence-layer.instructions.md` | Any file in `src/Core/Persistence/**` | `BaseRepository<T>`, `IEntityTypeConfiguration<T>`, `AsNoTracking()` |
-| `bff-controller.instructions.md` | Any file in `src/Host/BFF/**` | Controller pattern, `Result<T>` → HTTP, audit logging |
+| `api-controller.instructions.md` | Any file in `src/Host/Client/**` | Controller pattern, `Result<T>` → HTTP, audit logging |
 | `blazor-presentation.instructions.md` | Presentation pages, ViewModels, dialogs | ViewModel lifecycle, `IsBusy` guard, MudBlazor, `IStringLocalizer` |
 
 You don't need to invoke these — they activate automatically and add context to Copilot's responses.
